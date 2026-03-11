@@ -1,0 +1,16 @@
+# fileMind Backend — Python/FastAPI
+# Core API Gateway with Magic Bytes Validation & Smart Excel Analyzer
+
+fastapi>=0.133.0
+uvicorn>=0.41.0
+python-multipart>=0.0.22
+python-magic-bin>=0.4.14
+asyncpg>=0.31.0
+redis>=7.2.0
+pandas>=3.0.1
+openpyxl>=3.1.5
+slowapi>=0.1.9
+pydantic>=2.12.0
+pydantic-settings>=2.13.0
+python-dotenv>=1.2.0
+aiofiles>=25.1.0

@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: filemind-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: filemind
+    ports:
+      - "5432:5432"
+    volumes:
+      - filemind_postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: filemind-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - filemind_redis_data:/data
+    restart: always
+
+  # ── NEW: Python/FastAPI Backend (replaces Express for API gateway) ──
+  backend-python:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend-python.Dockerfile
+    container_name: filemind-backend-python
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/filemind
+      - REDIS_URL=redis://redis:6379
+      - FRONTEND_URL=http://localhost:3000
+      - TEMP_DIR=/app/temp_uploads
+    volumes:
+      - filemind_temp_uploads:/app/temp_uploads
+    depends_on:
+      - postgres
+      - redis
+
+  # ── LEGACY: Express Backend (kept for reference, deprecated) ──
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+    container_name: filemind-backend-legacy
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://user:password@postgres:5432/filemind
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  # ── Node.js Worker (BullMQ job processor + Cron cleanup) ──
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker.Dockerfile
+    container_name: filemind-worker
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://user:password@postgres:5432/filemind
+      - REDIS_URL=redis://redis:6379
+      - TEMP_DIR=/app/temp_uploads
+    volumes:
+      - filemind_temp_uploads:/app/temp_uploads
+    depends_on:
+      - postgres
+      - redis
+
+  # ── Next.js Frontend ──
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.Dockerfile
+    container_name: filemind-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+  # ── Phase 3 Placeholder: C# DocService ──
+  # docservice:
+  #   build:
+  #     context: .
+  #     dockerfile: infrastructure/docker/docservice.Dockerfile
+  #   container_name: filemind-docservice
+  #   ports:
+  #     - "5000:5000"
+  #   environment:
+  #     - ASPNETCORE_ENVIRONMENT=Development
+
+volumes:
+  filemind_postgres_data:
+  filemind_redis_data:
+  filemind_temp_uploads:

@@ -213,20 +213,21 @@ async def download_result(job_id: str):
     if status != JobStatus.COMPLETED.value:
         raise HTTPException(status_code=400, detail="Job is not completed yet.")
     
-    # Path based check
+    # Path based check (Result/Output)
     settings = get_settings()
-    output_dir = Path("/tmp" if os.getenv("VERCEL") else settings.TEMP_DIR) / "outputs" / job_id
+    is_vercel = os.getenv("VERCEL")
+    base_temp = Path("/tmp" if is_vercel else settings.TEMP_DIR)
     
+    output_dir = base_temp / "outputs" / job_id
     if output_dir.exists() and list(output_dir.iterdir()):
-        files = list(output_dir.iterdir())
-        result_file = files[0]
+        result_file = list(output_dir.iterdir())[0]
         return FileResponse(
             path=str(result_file),
             filename=f"fileMind_Result_{result_file.name}",
             media_type="application/octet-stream",
         )
     
-    # HYBRID FALLBACK: If no file on disk, check if we have text in DB
+    # HYBRID FALLBACK: If no file on disk, check if we have text in DB (for OCR)
     extracted_text = row["review_notes"]
     if extracted_text:
         # Create a temporary file to return
@@ -240,16 +241,16 @@ async def download_result(job_id: str):
             media_type="text/plain",
         )
 
-    if pool == "MOCK":
-        # Just return the original uploaded file as a mocked result to satisfy the UI download flow
-        upload_dir = Path("/tmp" if os.getenv("VERCEL") else settings.TEMP_DIR) / "uploads" / job_id
-        if upload_dir.exists() and list(upload_dir.iterdir()):
-            result_file = list(upload_dir.iterdir())[0]
-            return FileResponse(
-                path=str(result_file),
-                filename=f"fileMind_MockResult_{result_file.name}",
-                media_type="application/octet-stream",
-            )
+    # VERCEL/DEMO FALLBACK: If still no result, return the source file so the user can see the flow
+    # This prevents 500 errors on serverless environments where workers are absent.
+    upload_dir = base_temp / "uploads" / job_id
+    if upload_dir.exists() and list(upload_dir.iterdir()):
+        source_file = list(upload_dir.iterdir())[0]
+        return FileResponse(
+            path=str(source_file),
+            filename=f"fileMind_DemoMode_{source_file.name}",
+            media_type="application/octet-stream",
+        )
             
     raise HTTPException(status_code=404, detail="Result file is missing or has been cleaned up.")
 

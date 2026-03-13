@@ -192,19 +192,19 @@ export const ExcelAnalyzer: React.FC = () => {
                                         <tr key={name} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-6 py-4 font-semibold text-slate-800">{name}</td>
                                             <td className="px-6 py-4 text-sm text-slate-600">
-                                                <code className="bg-slate-100 px-2 py-0.5 rounded text-xs">{stats.dtype}</code>
+                                                <code className="bg-slate-100 px-2 py-0.5 rounded text-xs">{stats?.dtype || 'N/A'}</code>
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">{stats.unique.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600">{stats?.unique?.toLocaleString() ?? 0}</td>
                                             <td className="px-6 py-4">
-                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${stats.nulls > 0 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                                                    {stats.nulls} missing
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${(stats?.nulls ?? 0) > 0 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                                    {stats?.nulls ?? 0} missing
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-xs text-slate-500">
-                                                {stats.mean !== undefined ? (
+                                                {stats?.mean !== undefined && stats?.mean !== null ? (
                                                     <div className="flex flex-col gap-0.5">
                                                         <span>Mean: <strong>{stats.mean}</strong></span>
-                                                        <span>Range: <strong>{stats.min}</strong> - <strong>{stats.max}</strong></span>
+                                                        <span>Range: <strong>{stats.min ?? '-'}</strong> - <strong>{stats.max ?? '-'}</strong></span>
                                                     </div>
                                                 ) : '-'}
                                             </td>

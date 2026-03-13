@@ -106,19 +106,22 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             if (toolType === ToolType.OCR_IMAGE) {
                 const ocrWorker = createOCRWorker();
                 try {
-                    clientResult = await ocrWorker.processTask('PROCESS_OCR', { file });
+                    // Make client-side worker processing optional so it doesn't block upload on worker crashes.
+                    // Use optional chaining for safer access.
+                    clientResult = await ocrWorker?.processTask('PROCESS_OCR', { file });
                     console.log('[fileMind] Client-side OCR Success:', clientResult);
-                    // Pass the extracted text to backend for AI verification
                     if (clientResult) {
                         formData.append('clientExtractedText', clientResult);
                     }
+                } catch (workerErr) {
+                    console.warn('[fileMind] Client-side OCR Worker failed, falling back to server-only:', workerErr);
                 } finally {
                     ocrWorker.terminate();
                 }
             } else if (toolType === ToolType.PDF_TO_WORD) {
+                // PDF client processing is optional (metadata only), so we ignore failures
                 const pdfWorker = createPDFWorker();
                 try {
-                    // Pre-analyze or simple extract
                     const reader = new FileReader();
                     const arrayBuffer = await new Promise<ArrayBuffer>((res, rej) => {
                         reader.onload = () => res(reader.result as ArrayBuffer);
@@ -127,6 +130,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                     });
                     const analysis = await pdfWorker.processTask('PROCESS_PDF_METADATA', { arrayBuffer });
                     console.log('[fileMind] Client-side PDF Analysis:', analysis);
+                } catch (workerErr) {
+                    console.warn('[fileMind] PDF Worker failed, skipping metadata extraction:', workerErr);
                 } finally {
                     pdfWorker.terminate();
                 }

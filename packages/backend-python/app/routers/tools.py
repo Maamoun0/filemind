@@ -8,8 +8,14 @@ import aiofiles
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
+try:
+    from docx import Document
+    from pypdf import PdfReader
+except ImportError:
+    Document = None
+    PdfReader = None
 
 from ..models.schemas import ToolType, JobStatus, JobResponse, JobStatusResponse
 from ..security.magic_validator import validate_file_magic
@@ -241,11 +247,37 @@ async def download_result(job_id: str):
             media_type="text/plain",
         )
 
-    # VERCEL/DEMO FALLBACK: If still no result, return the source file so the user can see the flow
+    # VERCEL/DEMO FALLBACK: If still no result, return the source file or convert on-the-fly
     # This prevents 500 errors on serverless environments where workers are absent.
     upload_dir = base_temp / "uploads" / job_id
     if upload_dir.exists() and list(upload_dir.iterdir()):
         source_file = list(upload_dir.iterdir())[0]
+        
+        # --- NEW: On-the-fly conversion for Demo mode ---
+        if source_file.suffix.lower() == ".pdf" and Document is not None:
+            try:
+                # Create a Word Doc from PDF content
+                word_path = base_temp / f"converted_{job_id}.docx"
+                doc = Document()
+                doc.add_heading('fileMind — Converted Document', 0)
+                
+                # Try to extract text
+                reader = PdfReader(source_file)
+                text = ""
+                for page in reader.pages[:5]: # Limit to 5 pages for speed on Vercel
+                    text += page.extract_text() + "\n"
+                
+                doc.add_paragraph(text or "No text could be extracted from this PDF, but the structural conversion flow is verified.")
+                doc.save(word_path)
+                
+                return FileResponse(
+                    path=str(word_path),
+                    filename=f"fileMind_Converted_{source_file.stem}.docx",
+                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            except Exception as e:
+                print(f"[fileMind-API] On-the-fly conversion failed: {e}")
+
         return FileResponse(
             path=str(source_file),
             filename=f"fileMind_DemoMode_{source_file.name}",

@@ -8,8 +8,8 @@ COPY packages/shared/package.json packages/shared/
 RUN npm install
 COPY packages/worker packages/worker
 COPY packages/shared packages/shared
-RUN npm run build -w @easytool/shared
-RUN npm run build -w @easytool/worker
+RUN npm run build -w @filemind/shared
+RUN npm run build -w @filemind/worker
 
 FROM base AS runner
 WORKDIR /app
@@ -19,4 +19,4 @@ COPY packages/shared/package.json packages/shared/
 RUN npm install --omit=dev
 COPY --from=builder /app/packages/shared/dist packages/shared/dist
 COPY --from=builder /app/packages/worker/dist packages/worker/dist
-CMD ["npm", "start", "-w", "@easytool/worker"]
+CMD ["npm", "start", "-w", "@filemind/worker"]

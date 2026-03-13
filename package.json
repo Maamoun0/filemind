@@ -6,8 +6,11 @@
         "packages/*"
     ],
     "scripts": {
-        "dev": "concurrently \"npm run dev -w @filemind/backend\" \"npm run dev -w @filemind/worker\" \"npm run dev -w frontend\"",
+        "dev": "concurrently \"npm run dev:python\" \"npm run dev -w @filemind/worker\" \"npm run dev -w frontend\"",
+        "dev:python": "cd packages/backend-python && .\\venv\\Scripts\\python -m uvicorn app.main:app --reload --port 8000",
+        "dev:legacy": "concurrently \"npm run dev -w @filemind/backend\" \"npm run dev -w @filemind/worker\" \"npm run dev -w frontend\"",
         "build": "npm run build --workspaces --if-present",
+        "vercel-build": "npm run build -w frontend",
         "start": "npm run start --workspaces --if-present"
     },
     "devDependencies": {

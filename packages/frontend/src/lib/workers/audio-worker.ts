@@ -33,38 +33,33 @@ async function initFFmpeg() {
     return ffmpeg;
 }
 
-self.onmessage = async (e: MessageEvent) => {
+const ctx: Worker = self as any;
+
+ctx.onmessage = async (e: MessageEvent) => {
     const { type, data } = e.data;
 
     try {
         switch (type) {
             case 'CONVERT_AUDIO': {
                 const { file, inputFormat, outputFormat } = data;
-                // file = File object or ArrayBuffer
-                // inputFormat = 'ogg' | 'wav' | 'm4a' | 'webm' etc.
-                // outputFormat = 'mp3' | 'wav' | 'ogg' etc.
 
                 const ff = await initFFmpeg();
 
                 const inputName = `input.${inputFormat}`;
                 const outputName = `output.${outputFormat}`;
 
-                // Write the input file into FFmpeg's virtual filesystem
                 const fileData = file instanceof ArrayBuffer ? new Uint8Array(file) : await fetchFile(file);
                 await ff.writeFile(inputName, fileData);
 
-                // Execute the conversion
                 await ff.exec(['-i', inputName, '-q:a', '2', outputName]);
 
-                // Read the output
                 const outputData = await ff.readFile(outputName);
                 const outputBuffer = (outputData as Uint8Array).buffer;
 
-                // Cleanup virtual filesystem
                 await ff.deleteFile(inputName);
                 await ff.deleteFile(outputName);
 
-                self.postMessage({
+                ctx.postMessage({
                     status: 'SUCCESS',
                     result: {
                         output: outputBuffer,
@@ -76,10 +71,10 @@ self.onmessage = async (e: MessageEvent) => {
             }
 
             default:
-                self.postMessage({ status: 'ERROR', message: `Unknown audio task type: ${type}` });
+                ctx.postMessage({ status: 'ERROR', message: `Unknown audio task type: ${type}` });
         }
     } catch (error: any) {
         console.error('[Worker-Audio] Error:', error);
-        self.postMessage({ status: 'ERROR', message: error.message || 'Audio processing failed.' });
+        ctx.postMessage({ status: 'ERROR', message: error.message || 'Audio processing failed.' });
     }
 };

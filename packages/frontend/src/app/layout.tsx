@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Outfit } from 'next/font/google';
 import Link from 'next/link';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 
 export const metadata: Metadata = {
   title: 'fileMind | Smart & Secure File Processing',
@@ -29,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="flex flex-col min-h-screen">
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
+      <body className="flex flex-col min-h-screen bg-[#fafbff] text-slate-900 antialiased">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
             <Link href="/" className="font-bold text-xl tracking-tight">

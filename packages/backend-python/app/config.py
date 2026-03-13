@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # Server
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://filemind-ai.vercel.app"
     
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/filemind"

@@ -95,7 +95,19 @@ ALLOWED_MAGIC_TYPES: dict[ToolType, list[str]] = {
 }
 
 
-class JobRecord(BaseModel):
+def to_camel(string: str) -> str:
+    parts = string.split('_')
+    return parts[0] + ''.join(word.capitalize() for word in parts[1:])
+
+
+class FilemindBaseModel(BaseModel):
+    class Config:
+        alias_generator = to_camel
+        populate_by_name = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+
+class JobRecord(FilemindBaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     tool_type: ToolType
     status: JobStatus = JobStatus.PENDING
@@ -107,17 +119,16 @@ class JobRecord(BaseModel):
     error_message: Optional[str] = None
 
 
-class DoubleCheckResult(BaseModel):
-    """AI Double-Check System result from debate between Expert A and Expert B."""
+class DoubleCheckResult(FilemindBaseModel):
     verdict: ReviewVerdict
     confidence: float = Field(ge=0.0, le=1.0)
-    processor_summary: str          # Expert A's brief summary
-    reviewer_notes: str             # Expert B's review notes
-    revisions_applied: int = 0      # Number of corrections made
-    cached_result: bool = False     # Whether result came from cache
+    processor_summary: str
+    reviewer_notes: str
+    revisions_applied: int = 0
+    cached_result: bool = False
 
 
-class DoubleCheckCacheEntry(BaseModel):
+class DoubleCheckCacheEntry(FilemindBaseModel):
     content_hash: str
     tool_type: ToolType
     processor_result: str
@@ -126,19 +137,29 @@ class DoubleCheckCacheEntry(BaseModel):
     confidence: float
 
 
-class JobResponse(BaseModel):
+class JobResponse(FilemindBaseModel):
     job_id: str
     status: JobStatus
     message: Optional[str] = None
     expires_at: Optional[datetime] = None
-    review_info: Optional[DoubleCheckResult] = None  # AI Double-Check result
+    review_info: Optional[DoubleCheckResult] = None
 
 
-class ExcelAnalysisResult(BaseModel):
+class JobStatusResponse(FilemindBaseModel):
+    job_id: str
+    status: JobStatus
+    tool_type: ToolType
+    error_message: Optional[str] = None
+    created_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    review_info: Optional[DoubleCheckResult] = None
+
+
+class ExcelAnalysisResult(FilemindBaseModel):
     total_rows: int
     total_columns: int
     duplicate_rows: int
     empty_cells: int
-    column_stats: dict  # column name → {dtype, nulls, unique, mean, min, max}
+    column_stats: dict
     message: str
 

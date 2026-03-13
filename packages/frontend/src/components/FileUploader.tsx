@@ -108,22 +108,23 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 try {
                     clientResult = await ocrWorker.processTask('PROCESS_OCR', { file });
                     console.log('[fileMind] Client-side OCR Success:', clientResult);
-                    // In a real app, we would offer this result for download or display
-                    // For now, if client-side is enough, we mark as completed
+                    // Pass the extracted text to backend for AI verification
+                    if (clientResult) {
+                        formData.append('clientExtractedText', clientResult);
+                    }
                 } finally {
                     ocrWorker.terminate();
                 }
             } else if (toolType === ToolType.PDF_TO_WORD) {
-                // Example: Pre-analyze PDF in browser
                 const pdfWorker = createPDFWorker();
                 try {
+                    // Pre-analyze or simple extract
                     const reader = new FileReader();
                     const arrayBuffer = await new Promise<ArrayBuffer>((res, rej) => {
                         reader.onload = () => res(reader.result as ArrayBuffer);
                         reader.onerror = rej;
                         reader.readAsArrayBuffer(file);
                     });
-
                     const analysis = await pdfWorker.processTask('PROCESS_PDF_METADATA', { arrayBuffer });
                     console.log('[fileMind] Client-side PDF Analysis:', analysis);
                 } finally {
@@ -131,11 +132,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 }
             }
 
-            // For now, even if client-side logic runs, we still proceed to backend 
-            // unless we've fully implemented the specific tool's client logic.
-            const clientSideHandled = false;
+            // Architecture: On Vercel, we leverage Hybrid Processing
+            // Client handles heavy lifting (OCR), Backend handles AI verification
+            const hybridMode = true; 
 
-            if (clientSideHandled) {
+            if (!hybridMode) {
                 setJobStatus(JobStatus.COMPLETED);
                 setIsUploading(false);
                 return;
@@ -210,9 +211,12 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all duration-300
-            ${isHovering ? 'border-primary-500 bg-primary-50 scale-[1.02]' : 'border-slate-300 bg-white hover:border-primary-400 hover:bg-slate-50'}`}
+                    className={`relative glass-card p-12 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 group overflow-hidden
+            ${isHovering ? 'border-primary-500 scale-[1.03] ring-4 ring-primary-500/10' : 'hover:border-primary-400'}`}
                 >
+                    {/* Animated background glow on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -220,15 +224,19 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                         accept={acceptedMimeTypes}
                         className="hidden"
                     />
-                    <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mb-4">
-                        <UploadCloud size={32} />
+                    <div className="relative w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
+                        <UploadCloud size={36} />
+                        {/* Pulse effect */}
+                        <div className="absolute inset-0 rounded-3xl bg-indigo-400/20 animate-ping group-hover:block hidden" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-800 mb-2">Drag & Drop your file here</h3>
-                    <p className="text-slate-500 mb-4 text-center text-sm max-w-sm">
-                        Or click to browse from your device. Secure, fast, and completely private with <span className="text-indigo-600 font-bold">fileMind</span>.
+                    
+                    <h3 className="text-2xl font-bold text-slate-900 mb-2 font-outfit">Drag & Drop your file</h3>
+                    <p className="text-slate-500 mb-6 text-center text-sm max-w-sm leading-relaxed">
+                        Or click to browse from your device. <br />
+                        Secure, fast, and completely private with <span className="text-indigo-600 font-bold">fileMind</span>.
                     </p>
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-full">
-                        Max File Size: {maxSizeMB}MB
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] bg-slate-100/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-slate-200/50 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors">
+                        Max Capacity: {maxSizeMB}MB
                     </div>
                 </div>
             )}
@@ -295,7 +303,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                     </div>
                                     <a
                                         href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/download/${jobId}`}
-                                        download
                                         className="btn-primary w-full py-3 mt-2 text-lg text-center inline-block"
                                     >
                                         Download Verified Result

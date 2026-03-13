@@ -78,11 +78,45 @@ export const runAIDoubleCheck = async (
         .digest('hex');
 
     // ── Step 4: Run the double-check review ──
-    // In production, this would call the Python backend's internal API
-    // For now, we simulate the review process locally
-    const reviewResult = await simulateDoubleCheck(
-        jobId, toolType, outputContent, originalName, contentHash
-    );
+    // Architecture: Call the Python backend's AI Double-Check engine
+    console.log(`[fileMind-DC] Requesting AI verification from Python engine @ ${PYTHON_API_URL}`);
+    
+    let reviewResult: ReviewResult;
+    try {
+        const response = await fetch(`${PYTHON_API_URL}/api/ai-review/trigger`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                job_id: jobId,
+                tool_type: toolType,
+                output_content: outputContent,
+                original_name: originalName,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Python API returned ${response.status}`);
+        }
+
+        const data: any = await response.json();
+        
+        // Map Python's camelCase response to our local interface
+        reviewResult = {
+            verdict: data.verdict,
+            confidence: data.confidence,
+            processorSummary: data.processorSummary,
+            reviewerNotes: data.reviewerNotes,
+            revisionsApplied: data.revisionsApplied,
+            cachedResult: data.cachedResult,
+        };
+    } catch (err: any) {
+        console.warn(`[fileMind-DC] AI engine unavailable or failed: ${err.message}. Falling back to simulation.`);
+        // Fallback to local simulation if the Python backend is down
+        reviewResult = await simulateDoubleCheck(
+            jobId, toolType, outputContent, originalName, contentHash
+        );
+    }
 
     // ── Step 5: Update job record with review results ──
     await db.query(

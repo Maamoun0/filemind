@@ -12,14 +12,8 @@ export class WorkerManager {
     private worker: Worker | null = null;
     private onProgress?: (percent: number) => void;
 
-    constructor(workerPath: string) {
-        if (typeof window !== 'undefined') {
-            try {
-                this.worker = new Worker(new URL(workerPath, import.meta.url));
-            } catch (err) {
-                console.warn('[WorkerManager] Failed to initialize worker:', err);
-            }
-        }
+    constructor(worker: Worker | null) {
+        this.worker = worker;
     }
 
     /**
@@ -47,7 +41,6 @@ export class WorkerManager {
                     if (this.onProgress && result?.progress !== undefined) {
                         this.onProgress(result.progress);
                     }
-                    // Don't resolve/reject on progress — keep listening
                 } else {
                     reject(new Error(message || 'Worker task failed'));
                 }
@@ -58,7 +51,6 @@ export class WorkerManager {
                 reject(new Error('Worker execution error'));
             };
 
-            // Post the message with any Transferable objects
             this.worker.postMessage({ type, data });
         });
     }
@@ -70,14 +62,41 @@ export class WorkerManager {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Factory Functions for each domain
+// Factory Functions for each domain - Static analysis friendly
 // ──────────────────────────────────────────────────────────────
 
 /** PDF operations: merge, split, compress, metadata */
-export const createPDFWorker = () => new WorkerManager('./pdf-worker.ts');
+export const createPDFWorker = () => {
+    if (typeof window === 'undefined') return new WorkerManager(null);
+    try {
+        const worker = new Worker(new URL('./pdf-worker.ts', import.meta.url));
+        return new WorkerManager(worker);
+    } catch (e) {
+        console.error('Failed to create PDF worker:', e);
+        return new WorkerManager(null);
+    }
+};
 
 /** OCR: extract text from images using Tesseract.js */
-export const createOCRWorker = () => new WorkerManager('./ocr-worker.ts');
+export const createOCRWorker = () => {
+    if (typeof window === 'undefined') return new WorkerManager(null);
+    try {
+        const worker = new Worker(new URL('./ocr-worker.ts', import.meta.url));
+        return new WorkerManager(worker);
+    } catch (e) {
+        console.error('Failed to create OCR worker:', e);
+        return new WorkerManager(null);
+    }
+};
 
 /** Audio: format conversion using FFmpeg WASM */
-export const createAudioWorker = () => new WorkerManager('./audio-worker.ts');
+export const createAudioWorker = () => {
+    if (typeof window === 'undefined') return new WorkerManager(null);
+    try {
+        const worker = new Worker(new URL('./audio-worker.ts', import.meta.url));
+        return new WorkerManager(worker);
+    } catch (e) {
+        console.error('Failed to create Audio worker:', e);
+        return new WorkerManager(null);
+    }
+};

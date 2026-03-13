@@ -1,6 +1,8 @@
 import * as Tesseract from 'tesseract.js';
 
-self.onmessage = async (e: MessageEvent) => {
+const ctx: Worker = self as any;
+
+ctx.onmessage = async (e: MessageEvent) => {
     const { type, data } = e.data;
 
     if (type === 'PROCESS_OCR') {
@@ -15,13 +17,13 @@ self.onmessage = async (e: MessageEvent) => {
                 { logger: m => console.log(m) }
             );
 
-            self.postMessage({
+            ctx.postMessage({
                 status: 'SUCCESS',
                 result: result.data.text
             });
         } catch (error: any) {
             console.error('[Worker-OCR] Error:', error);
-            self.postMessage({ status: 'ERROR', message: error.message });
+            ctx.postMessage({ status: 'ERROR', message: error.message });
         }
     }
 };

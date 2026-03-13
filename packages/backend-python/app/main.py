@@ -56,10 +56,18 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "https://frontend-roan-seven-93.vercel.app",
+        "https://filemind-ai.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 

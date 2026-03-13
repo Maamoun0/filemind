@@ -23,10 +23,13 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'], // Professional font
+        sans: ['var(--font-inter)', 'Inter', 'sans-serif'],
+        outfit: ['var(--font-outfit)', 'Outfit', 'sans-serif'],
       },
       boxShadow: {
         'soft': '0 10px 40px -10px rgba(0,0,0,0.05)',
+        'premium': '0 20px 50px -12px rgba(99, 102, 241, 0.15)',
+        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',

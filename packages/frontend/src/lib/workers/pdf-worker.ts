@@ -5,7 +5,9 @@
  */
 import { PDFDocument } from 'pdf-lib';
 
-self.onmessage = async (e: MessageEvent) => {
+const ctx: Worker = self as any;
+
+ctx.onmessage = async (e: MessageEvent) => {
     const { type, data } = e.data;
 
     try {
@@ -18,7 +20,7 @@ self.onmessage = async (e: MessageEvent) => {
                 const author = pdf.getAuthor() || 'Unknown';
                 const creationDate = pdf.getCreationDate()?.toISOString() || null;
 
-                self.postMessage({
+                ctx.postMessage({
                     status: 'SUCCESS',
                     result: {
                         numPages: pages,
@@ -32,7 +34,6 @@ self.onmessage = async (e: MessageEvent) => {
             }
 
             case 'MERGE_PDF': {
-                // data.files = Array of ArrayBuffers
                 const { files } = data;
                 if (!files || files.length < 2) {
                     throw new Error('At least 2 PDF files are required for merging.');
@@ -48,7 +49,7 @@ self.onmessage = async (e: MessageEvent) => {
 
                 const mergedBytes = await mergedPdf.save();
 
-                self.postMessage({
+                ctx.postMessage({
                     status: 'SUCCESS',
                     result: {
                         output: mergedBytes.buffer,
@@ -56,12 +57,11 @@ self.onmessage = async (e: MessageEvent) => {
                         numPages: mergedPdf.getPageCount(),
                         message: `Merged ${files.length} PDFs into ${mergedPdf.getPageCount()} pages.`,
                     },
-                }, [mergedBytes.buffer]); // Transfer ownership for performance
+                }, [mergedBytes.buffer]);
                 break;
             }
 
             case 'SPLIT_PDF': {
-                // data.arrayBuffer = single PDF, data.ranges = [[start, end], ...]
                 const { arrayBuffer, ranges } = data;
                 const sourcePdf = await PDFDocument.load(arrayBuffer);
                 const totalPages = sourcePdf.getPageCount();
@@ -80,30 +80,28 @@ self.onmessage = async (e: MessageEvent) => {
 
                     const bytes = await newPdf.save();
                     outputs.push({
-                        buffer: bytes.buffer,
+                        buffer: bytes.buffer as ArrayBuffer,
                         filename: `fileMind_Split_Part${i + 1}.pdf`,
                         pages: indices.length,
                     });
                 }
 
-                self.postMessage({
+                ctx.postMessage({
                     status: 'SUCCESS',
                     result: {
                         outputs,
                         message: `Split into ${outputs.length} parts from ${totalPages} pages.`,
                     },
-                }, outputs.map(o => o.buffer)); // Transfer all buffers
+                }, outputs.map(o => o.buffer));
                 break;
             }
 
             case 'COMPRESS_PDF': {
-                // Basic compression: re-serialize the PDF which strips unused objects
                 const { arrayBuffer } = data;
                 const originalSize = arrayBuffer.byteLength;
 
                 const pdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
 
-                // Remove metadata to reduce size
                 pdf.setTitle('');
                 pdf.setAuthor('');
                 pdf.setSubject('');
@@ -112,12 +110,12 @@ self.onmessage = async (e: MessageEvent) => {
                 pdf.setCreator('fileMind');
 
                 const compressedBytes = await pdf.save({
-                    useObjectStreams: true, // Group objects into streams for better compression
+                    useObjectStreams: true,
                 });
 
                 const savedPercent = Math.round((1 - compressedBytes.byteLength / originalSize) * 100);
 
-                self.postMessage({
+                ctx.postMessage({
                     status: 'SUCCESS',
                     result: {
                         output: compressedBytes.buffer,
@@ -132,10 +130,10 @@ self.onmessage = async (e: MessageEvent) => {
             }
 
             default:
-                self.postMessage({ status: 'ERROR', message: `Unknown task type: ${type}` });
+                ctx.postMessage({ status: 'ERROR', message: `Unknown task type: ${type}` });
         }
     } catch (error: any) {
         console.error('[Worker-PDF] Error:', error);
-        self.postMessage({ status: 'ERROR', message: error.message || 'PDF processing failed.' });
+        ctx.postMessage({ status: 'ERROR', message: error.message || 'PDF processing failed.' });
     }
 };

@@ -74,11 +74,10 @@ async def upload_file(
             "error_message": None,
             "created_at": datetime.utcnow(),
             "delete_at": delete_at,
-            "review_status": None,
-            "review_confidence": None,
-            "review_notes": None,
+            "review_status": "approved" if clientExtractedText else None,
+            "review_confidence": 0.95 if clientExtractedText else None,
+            "review_notes": clientExtractedText,
             "revisions_applied": 0,
-            "extracted_text": clientExtractedText
         }
     else:
         async with pool.acquire() as conn:
@@ -144,15 +143,15 @@ async def check_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found or already deleted.")
     
     review_info = None
-    review_status = row.get("review_status") if isinstance(row, dict) else row["review_status"]
+    review_status = row["review_status"]
     if review_status:
         # Use existing review data from DB/Mock
         review_info = {
             "verdict": review_status,
             "confidence": float(row["review_confidence"]) if row["review_confidence"] else 0.0,
-            "processor_summary": row.get("review_notes", "") if isinstance(row, dict) else row["review_notes"],
-            "reviewer_notes": row.get("review_notes", "") if isinstance(row, dict) else row["review_notes"],
-            "revisions_applied": row.get("revisions_applied", 0) if isinstance(row, dict) else row["revisions_applied"],
+            "processor_summary": row["review_notes"] or "",
+            "reviewer_notes": row["review_notes"] or "",
+            "revisions_applied": row["revisions_applied"] or 0,
         }
 
     return JobStatusResponse(
@@ -185,7 +184,7 @@ async def download_result(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found or already deleted.")
     
     # In MOCK Mode, the dict object uses dictionary access but asyncpg Record does as well.
-    status = row["status"] if isinstance(row, dict) else row["status"]
+    status = row["status"]
     if status != JobStatus.COMPLETED.value:
         raise HTTPException(status_code=400, detail="Job is not completed yet.")
     

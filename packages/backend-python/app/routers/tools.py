@@ -261,11 +261,13 @@ async def download_result(job_id: str):
                 doc = Document()
                 doc.add_heading('fileMind — Converted Document', 0)
                 
-                # Try to extract text
+                # Try to extract text from ALL pages
                 reader = PdfReader(source_file)
                 text = ""
-                for page in reader.pages[:5]: # Limit to 5 pages for speed on Vercel
-                    text += page.extract_text() + "\n"
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
                 
                 doc.add_paragraph(text or "No text could be extracted from this PDF, but the structural conversion flow is verified.")
                 doc.save(word_path)

@@ -11,11 +11,12 @@ from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 try:
+    from pdf2docx import Converter
     from docx import Document
-    from pypdf import PdfReader
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
 except ImportError:
+    Converter = None
     Document = None
-    PdfReader = None
 
 from ..models.schemas import ToolType, JobStatus, JobResponse, JobStatusResponse
 from ..security.magic_validator import validate_file_magic
@@ -253,32 +254,36 @@ async def download_result(job_id: str):
     if upload_dir.exists() and list(upload_dir.iterdir()):
         source_file = list(upload_dir.iterdir())[0]
         
-        # --- NEW: On-the-fly conversion for Demo mode ---
-        if source_file.suffix.lower() == ".pdf" and Document is not None:
+        # --- NEW: High-Fidelity conversion for Demo mode ---
+        if source_file.suffix.lower() == ".pdf" and Converter is not None:
             try:
-                # Create a Word Doc from PDF content
                 word_path = base_temp / f"converted_{job_id}.docx"
-                doc = Document()
-                doc.add_heading('fileMind — Converted Document', 0)
                 
-                # Try to extract text from ALL pages
-                reader = PdfReader(source_file)
-                text = ""
-                for page in reader.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text += page_text + "\n"
+                # 1. Use pdf2docx for high-fidelity conversion (tables, layout)
+                cv = Converter(str(source_file))
+                cv.convert(str(word_path), start=0, multi_processing=False)
+                cv.close()
                 
-                doc.add_paragraph(text or "No text could be extracted from this PDF, but the structural conversion flow is verified.")
-                doc.save(word_path)
-                
+                # 2. Add a discreet brand info instead of a giant header
+                if Document is not None:
+                    doc = Document(word_path)
+                    # Add small footer info
+                    section = doc.sections[0]
+                    footer = section.footer
+                    p = footer.paragraphs[0]
+                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                    run = p.add_run(f"Processed by fileMind — Secure & Smart")
+                    run.font.size = 80000 # ~8pt
+                    
+                    doc.save(word_path)
+
                 return FileResponse(
                     path=str(word_path),
                     filename=f"fileMind_Converted_{source_file.stem}.docx",
                     media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 )
             except Exception as e:
-                print(f"[fileMind-API] On-the-fly conversion failed: {e}")
+                print(f"[fileMind-API] High-fidelity conversion failed: {e}")
 
         return FileResponse(
             path=str(source_file),

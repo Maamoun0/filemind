@@ -15,11 +15,11 @@ interface ColumnStats {
 }
 
 interface ExcelAnalysisResult {
-    total_rows: number;
-    total_columns: number;
-    duplicate_rows: number;
-    empty_cells: number;
-    column_stats: Record<string, ColumnStats>;
+    totalRows: number;
+    totalColumns: number;
+    duplicateRows: number;
+    emptyCells: number;
+    columnStats: Record<string, ColumnStats>;
     message: string;
 }
 
@@ -137,30 +137,30 @@ export const ExcelAnalyzer: React.FC = () => {
                                 <span className="text-slate-500 text-sm font-medium">Total Rows</span>
                                 <Table className="text-indigo-500" size={20} />
                             </div>
-                            <span className="text-3xl font-bold text-slate-900">{result.total_rows.toLocaleString()}</span>
+                            <span className="text-3xl font-bold text-slate-900">{result.totalRows?.toLocaleString() ?? 0}</span>
                         </div>
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-1">
                             <div className="flex justify-between items-start">
                                 <span className="text-slate-500 text-sm font-medium">Columns</span>
                                 <ListFilter className="text-violet-500" size={20} />
                             </div>
-                            <span className="text-3xl font-bold text-slate-900">{result.total_columns}</span>
+                            <span className="text-3xl font-bold text-slate-900">{result.totalColumns ?? 0}</span>
                         </div>
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-1">
                             <div className="flex justify-between items-start">
                                 <span className="text-slate-500 text-sm font-medium">Duplicates</span>
-                                <AlertCircle className={result.duplicate_rows > 0 ? "text-amber-500" : "text-green-500"} size={20} />
+                                <AlertCircle className={(result.duplicateRows ?? 0) > 0 ? "text-amber-500" : "text-green-500"} size={20} />
                             </div>
-                            <span className={`text-3xl font-bold ${result.duplicate_rows > 0 ? "text-amber-600" : "text-slate-900"}`}>
-                                {result.duplicate_rows}
+                            <span className={`text-3xl font-bold ${(result.duplicateRows ?? 0) > 0 ? "text-amber-600" : "text-slate-900"}`}>
+                                {result.duplicateRows ?? 0}
                             </span>
                         </div>
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-1">
                             <div className="flex justify-between items-start">
                                 <span className="text-slate-500 text-sm font-medium">Empty Cells</span>
-                                <Info className={result.empty_cells > 0 ? "text-blue-500" : "text-green-500"} size={20} />
+                                <Info className={(result.emptyCells ?? 0) > 0 ? "text-blue-500" : "text-green-500"} size={20} />
                             </div>
-                            <span className="text-3xl font-bold text-slate-900">{result.empty_cells}</span>
+                            <span className="text-3xl font-bold text-slate-900">{result.emptyCells ?? 0}</span>
                         </div>
                     </div>
 
@@ -188,7 +188,7 @@ export const ExcelAnalyzer: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {Object.entries(result.column_stats).map(([name, stats]) => (
+                                    {Object.entries(result.columnStats || {}).map(([name, stats]) => (
                                         <tr key={name} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-6 py-4 font-semibold text-slate-800">{name}</td>
                                             <td className="px-6 py-4 text-sm text-slate-600">

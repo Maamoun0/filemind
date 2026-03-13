@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ExcelAnalyzer } from '@/components/ExcelAnalyzer';
 
 export const metadata: Metadata = {
     title: 'Smart Excel Analyzer | fileMind',
@@ -9,37 +10,31 @@ export const metadata: Metadata = {
 
 export default function ExcelAnalyzerPage() {
     return (
-        <div className="max-w-4xl mx-auto space-y-12 py-10">
+        <div className="max-w-6xl mx-auto space-y-12 py-10 px-4">
             <section className="text-center space-y-4 animate-slide-up">
-                <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
-                    Smart <span className="text-indigo-600">Excel</span> Analyzer
+                <div className="inline-block px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-xs font-bold uppercase tracking-widest mb-2">
+                    Powered by pandas
+                </div>
+                <h1 className="text-3xl md:text-6xl font-extrabold text-slate-900 tracking-tight font-outfit">
+                    Smart <span className="text-violet-600">Excel</span> Analyzer
                 </h1>
-                <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                    Upload any Excel (.xlsx) or CSV file and get <span className="font-semibold text-indigo-600">instant analysis</span> powered by pandas. Detect duplicates, empty cells, and get per-column statistics.
+                <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                    Upload any Excel (.xlsx) or CSV file and get <span className="font-semibold text-slate-900">instant insights</span>. Detect duplicates, empty cells, and get per-column statistics securely in the cloud.
                 </p>
             </section>
 
-            <section className="animate-fade-in">
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-12 flex flex-col items-center justify-center text-center">
-                        <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-4">
-                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">Upload Excel or CSV</h3>
-                        <p className="text-slate-500 mb-6 text-sm max-w-sm">
-                            Drag & drop your spreadsheet or click to browse. Analysis happens server-side using pandas for maximum accuracy.
-                        </p>
-                        <span className="inline-block bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold">
-                            Full integration coming soon
-                        </span>
-                    </div>
-                </div>
+            <section className="animate-fade-in relative">
+                {/* Decorative elements */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-violet-200/20 rounded-full blur-3xl -z-10" />
+                <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-200/20 rounded-full blur-3xl -z-10" />
+                
+                <ExcelAnalyzer />
             </section>
 
-            <div className="text-center pt-4">
-                <Link href="/" className="btn-secondary inline-flex items-center gap-2">
+            <div className="text-center pt-8">
+                <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-medium transition-colors">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                    Back to Home
+                    Back to fileMind Dashboard
                 </Link>
             </div>
         </div>

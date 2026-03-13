@@ -6,12 +6,13 @@ Smart, Secure, & Fast File Processing Platform.
 - **Zero Permanent Storage**: All files are automatically deleted after 1 hour.
 - **Privacy-First**: No user accounts, no tracking, hashed IP addresses.
 - **Hybrid Processing**: High-performance client-side workers combined with server-side processing queues.
-- **Modular Architecture**: Built with Next.js 14, Node.js, BullMQ, Redis, and PostgreSQL.
+- **Modular Architecture**: Built with Next.js 14, Python/FastAPI, BullMQ, Redis, and PostgreSQL.
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+
+- Python 3.10+
 - Docker & Docker Compose
 
 ### Setup

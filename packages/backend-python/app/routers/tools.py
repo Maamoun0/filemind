@@ -177,7 +177,7 @@ async def download_result(job_id: str):
     else:
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                """SELECT id, status, tool_type FROM jobs WHERE id = $1""",
+                """SELECT id, status, tool_type, review_notes FROM jobs WHERE id = $1""",
                 uuid.UUID(job_id)
             )
     

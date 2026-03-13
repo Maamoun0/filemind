@@ -13,7 +13,7 @@ ctx.onmessage = async (e: MessageEvent) => {
 
             const result = await Tesseract.recognize(
                 file,
-                'eng',
+                'ara+eng', // Replaced 'eng' with 'ara+eng' for bilingual OCR
                 { logger: m => console.log(m) }
             );
 

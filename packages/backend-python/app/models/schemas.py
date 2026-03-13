@@ -91,6 +91,8 @@ ALLOWED_MAGIC_TYPES: dict[ToolType, list[str]] = {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel",
         "text/csv",
+        "application/zip",
+        "application/octet-stream",
     ],
 }
 

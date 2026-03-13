@@ -54,14 +54,21 @@ export const ExcelAnalyzer: React.FC = () => {
                 body: formData,
             });
 
-            const data = await response.json();
+            let data;
+            const text = await response.text();
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error(`Server returned an invalid response: ${response.status} ${response.statusText}`);
+            }
 
             if (!response.ok) {
-                throw new Error(data.detail || 'Failed to analyze spreadsheet');
+                throw new Error(data.detail || data.error || 'Failed to analyze spreadsheet');
             }
 
             setResult(data);
         } catch (err: any) {
+            console.error('[fileMind] Excel Analysis Error:', err);
             setError(err.message || 'An unexpected error occurred.');
         } finally {
             setIsAnalyzing(false);

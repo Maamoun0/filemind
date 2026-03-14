@@ -22,6 +22,7 @@ from ..services.queue import add_job_to_queue
 from ..config import get_settings
 
 router = APIRouter(prefix="/api/tools", tags=["Tools"])
+from ..services.compressor import compress_file_to_zip
 
 
 # In-memory store for MOCK mode
@@ -29,6 +30,7 @@ MOCK_JOBS = {}
 
 @router.post("/upload", response_model=JobResponse, status_code=202)
 async def upload_file(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     toolType: str = Form(...),
     clientExtractedText: Optional[str] = Form(None),
@@ -261,6 +263,22 @@ async def download_result(job_id: str):
     if upload_dir.exists() and list(upload_dir.iterdir()):
         source_file = list(upload_dir.iterdir())[0]
         
+        # --- NEW: Generic File Compression (Zipping) ---
+        if row["tool_type"] == ToolType.COMPRESS_FILES:
+            try:
+                content = source_file.read_bytes()
+                zip_content = compress_file_to_zip(content, source_file.name)
+                zip_path = base_temp / f"compressed_{job_id}.zip"
+                zip_path.write_bytes(zip_content)
+                
+                return FileResponse(
+                    path=str(zip_path),
+                    filename=f"fileMind_Compressed_{source_file.stem}.zip",
+                    media_type="application/zip",
+                )
+            except Exception as e:
+                print(f"[fileMind-API] Compression failed: {e}")
+
         # --- NEW: High-Fidelity conversion for Demo mode ---
         if source_file.suffix.lower() == ".pdf" and Converter is not None:
             try:

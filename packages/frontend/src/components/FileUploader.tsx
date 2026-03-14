@@ -135,6 +135,72 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 } finally {
                     pdfWorker.terminate();
                 }
+            } else if (toolType === ToolType.COMPRESS_PDF) {
+                const pdfWorker = createPDFWorker();
+                try {
+                    setJobStatus(JobStatus.PROCESSING);
+                    const reader = new FileReader();
+                    const arrayBuffer = await new Promise<ArrayBuffer>((res, rej) => {
+                        reader.onload = () => res(reader.result as ArrayBuffer);
+                        reader.onerror = rej;
+                        reader.readAsArrayBuffer(file);
+                    });
+                    const result = await pdfWorker.processTask('COMPRESS_PDF', { arrayBuffer });
+                    console.log('[fileMind] Client-side Compression Success:', result);
+                    
+                    // Direct Download for client-side tools
+                    const blob = new Blob([result.output], { type: 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = result.filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    setJobStatus(JobStatus.COMPLETED);
+                    setIsUploading(false);
+                    return; // Stop here for purely client-side tools
+                } catch (workerErr) {
+                    console.error('[fileMind] PDF Compression failed:', workerErr);
+                    throw workerErr;
+                } finally {
+                    pdfWorker.terminate();
+                }
+            } else if (toolType === ToolType.SPLIT_PDF) {
+                const pdfWorker = createPDFWorker();
+                try {
+                    setJobStatus(JobStatus.PROCESSING);
+                    const reader = new FileReader();
+                    const arrayBuffer = await new Promise<ArrayBuffer>((res, rej) => {
+                        reader.onload = () => res(reader.result as ArrayBuffer);
+                        reader.onerror = rej;
+                        reader.readAsArrayBuffer(file);
+                    });
+                    // Split first 5 pages as a demo since we don't have range picker yet
+                    const result = await pdfWorker.processTask('SPLIT_PDF', { 
+                        arrayBuffer, 
+                        ranges: [[0, Math.min(4, 100)]] 
+                    });
+                    
+                    const blob = new Blob([result.outputs[0].buffer], { type: 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `fileMind_Split_${file.name}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    setJobStatus(JobStatus.COMPLETED);
+                    setIsUploading(false);
+                    return;
+                } catch (workerErr) {
+                    console.error('[fileMind] PDF Split failed:', workerErr);
+                    throw workerErr;
+                } finally {
+                    pdfWorker.terminate();
+                }
             }
 
             // Architecture: On Vercel, we leverage Hybrid Processing

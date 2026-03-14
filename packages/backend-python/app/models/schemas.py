@@ -50,6 +50,9 @@ class ToolType(str, Enum):
     
     # Smart Tools
     EXCEL_ANALYZER = "excel-analyzer"
+    
+    # Generic Tools
+    COMPRESS_FILES = "compress-files"
 
 
 # ── Tool-specific max file sizes (bytes) ──
@@ -60,6 +63,7 @@ MAX_FILE_SIZES: dict[ToolType, int] = {
     ToolType.OCR_IMAGE: 15 * 1024 * 1024,
     ToolType.AUDIO_TO_TEXT: 50 * 1024 * 1024,
     ToolType.EXCEL_ANALYZER: 50 * 1024 * 1024,
+    ToolType.COMPRESS_FILES: 100 * 1024 * 1024,
 }
 DEFAULT_MAX_FILE_SIZE = 30 * 1024 * 1024  # 30MB fallback
 
@@ -97,6 +101,7 @@ ALLOWED_MAGIC_TYPES: dict[ToolType, list[str]] = {
         "application/octet-stream",
         "application/x-zip-compressed",
     ],
+    ToolType.COMPRESS_FILES: ["*"], # Allow all types for compression
 }
 
 

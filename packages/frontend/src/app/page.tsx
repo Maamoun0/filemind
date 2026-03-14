@@ -112,16 +112,32 @@ export default function Home() {
             </div>
           </Link>
 
-          {/* PDF Utilities — Coming Soon */}
-          <div className="glass-card group relative overflow-hidden opacity-75 grayscale-[0.5] hover:grayscale-0">
+          {/* PDF Utilities */}
+          <Link href="/pdf-utilities" className="glass-card group relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full -mr-8 -mt-8 transition-all group-hover:scale-150" />
             <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 mb-6 group-hover:bg-red-600 group-hover:text-white transition-all duration-300">
               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
             </div>
-            <div className="inline-block px-2 py-0.5 rounded-lg bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-wider mb-2">Coming Soon</div>
             <h3 className="font-bold text-xl mb-3 text-slate-900 font-outfit">PDF Utilities</h3>
-            <p className="text-slate-600 text-sm leading-relaxed">Merge, split, and compress your PDF files without compromising quality.</p>
-          </div>
+            <p className="text-slate-600 text-sm leading-relaxed">Merge, split, and compress your PDF files without compromising quality. All on-device.</p>
+            <div className="mt-6 flex items-center text-red-600 font-semibold text-sm gap-1 group-hover:translate-x-2 transition-transform">
+              Launch Tool <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </div>
+          </Link>
+
+          {/* Universal Compressor */}
+          <Link href="/compress-files" className="glass-card group relative overflow-hidden ring-2 ring-blue-500/20">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mr-8 -mt-8 transition-all group-hover:scale-150" />
+            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            </div>
+            <div className="inline-block px-2 py-0.5 rounded-lg bg-blue-100 text-blue-600 text-[10px] font-bold uppercase tracking-wider mb-2">New Tool</div>
+            <h3 className="font-bold text-xl mb-3 text-slate-900 font-outfit">Smart Compressor</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">Reduce any file size by up to 80% with our smart high-density ZIP compression engine.</p>
+            <div className="mt-6 flex items-center text-blue-600 font-semibold text-sm gap-1 group-hover:translate-x-2 transition-transform">
+              Launch Tool <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </div>
+          </Link>
         </div>
       </section>
     </div>

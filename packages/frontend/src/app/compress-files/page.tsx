@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function CompressFilesPage() {
-    // @ts-ignore - Handle delay in type detection for new tool type
+    // @ts-expect-error - Handle delay in type detection for new tool type
     const toolType = ToolType.COMPRESS_FILES || ('compress-files' as any);
     const maxMb = (MAX_FILE_SIZES as any)[toolType] / (1024 * 1024) || 100;
 

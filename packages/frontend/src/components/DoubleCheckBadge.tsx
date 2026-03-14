@@ -32,13 +32,7 @@ const REVIEW_MESSAGES = [
     'Debate complete, finalizing verdict...',
 ];
 
-const REVIEW_MESSAGES_AR = [
-    'الخبير الأول يحلل جودة المخرجات...',
-    'الخبير الثاني يتحقق من النتائج...',
-    'مقارنة التحليلات من كلا الخبيرين...',
-    'إجراء فحوصات دقة التحقق...',
-    'اكتمل التدقيق، جارٍ تحديد النتيجة...',
-];
+
 
 export const DoubleCheckBadge: React.FC<DoubleCheckBadgeProps> = ({
     isReviewing,

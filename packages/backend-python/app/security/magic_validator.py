@@ -44,7 +44,7 @@ async def validate_file_magic(file: UploadFile, tool_type: ToolType) -> bytes:
             detail=f"Tool type '{tool_type.value}' has no defined allowed file types."
         )
     
-    if detected_type not in allowed_types:
+    if "*" not in allowed_types and detected_type not in allowed_types:
         raise HTTPException(
             status_code=415,
             detail=(

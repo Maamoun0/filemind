@@ -158,12 +158,15 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 throw new Error(data.error || 'Failed to upload file');
             }
 
-            setJobId(data.jobId);
+            const finalJobId = data.jobId || data.job_id;
+            setJobId(finalJobId);
             setJobStatus(data.status);
-            if (onSuccess) onSuccess(data.jobId);
+            if (onSuccess && finalJobId) onSuccess(finalJobId);
 
             // Start Polling process...
-            pollJobStatus(data.jobId);
+            if (finalJobId) {
+                pollJobStatus(finalJobId);
+            }
 
         } catch (err: unknown) {
             if (err instanceof Error) {

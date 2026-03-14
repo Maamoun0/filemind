@@ -10,13 +10,10 @@ from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
-try:
-    from pdf2docx import Converter
-    from docx import Document
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-except ImportError:
-    Converter = None
-    Document = None
+# Heavy imports moved inside functions to reduce cold starts on Vercel
+Converter = None
+Document = None
+WD_ALIGN_PARAGRAPH = None
 
 from ..models.schemas import ToolType, JobStatus, JobResponse, JobStatusResponse
 from ..security.magic_validator import validate_file_magic
@@ -200,6 +197,16 @@ async def check_job_status(job_id: str):
 @router.get("/download/{job_id}")
 async def download_result(job_id: str):
     """Download the processed output file for a completed job."""
+    # Lazy load heavy dependencies
+    try:
+        from pdf2docx import Converter
+        from docx import Document
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+    except ImportError:
+        Converter = None
+        Document = None
+        WD_ALIGN_PARAGRAPH = None
+
     pool = await get_db_pool()
     
     row = None
@@ -265,16 +272,14 @@ async def download_result(job_id: str):
                 cv.close()
                 
                 # 2. Add a discreet brand info instead of a giant header
-                if Document is not None:
+                if Document is not None and WD_ALIGN_PARAGRAPH is not None:
                     doc = Document(word_path)
-                    # Add small footer info
                     section = doc.sections[0]
                     footer = section.footer
                     p = footer.paragraphs[0]
                     p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
                     run = p.add_run(f"Processed by fileMind — Secure & Smart")
                     run.font.size = 80000 # ~8pt
-                    
                     doc.save(word_path)
 
                 return FileResponse(
@@ -282,6 +287,8 @@ async def download_result(job_id: str):
                     filename=f"fileMind_Converted_{source_file.stem}.docx",
                     media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 )
+            except ImportError:
+                print("[fileMind-API] pdf2docx or python-docx not installed. Cannot perform high-fidelity conversion.")
             except Exception as e:
                 print(f"[fileMind-API] High-fidelity conversion failed: {e}")
 

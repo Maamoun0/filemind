@@ -95,6 +95,7 @@ ALLOWED_MAGIC_TYPES: dict[ToolType, list[str]] = {
         "text/comma-separated-values",
         "application/zip",
         "application/octet-stream",
+        "application/x-zip-compressed",
     ],
 }
 

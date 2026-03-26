@@ -20,7 +20,7 @@
   .glass-card {
     @apply bg-white/70 backdrop-blur-xl rounded-[2rem] border border-white/40 shadow-glass p-8 transition-all duration-300 hover:shadow-premium hover:-translate-y-1;
   }
-
+ا
   .hero-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-indigo-950 to-indigo-600;
   }

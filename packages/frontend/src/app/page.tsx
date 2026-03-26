@@ -138,6 +138,20 @@ export default function Home() {
               Launch Tool <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </div>
           </Link>
+
+          {/* Document Translation */}
+          <Link href="/document-translation" className="glass-card group relative overflow-hidden ring-2 ring-emerald-500/20">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-8 -mt-8 transition-all group-hover:scale-150" />
+            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5c.456 2.146 1.314 4.148 2.378 5.894M11.957 15a13.914 13.914 0 01-6.124-3.543L3 14" /></svg>
+            </div>
+            <div className="inline-block px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-600 text-[10px] font-bold uppercase tracking-wider mb-2">Pro Tool</div>
+            <h3 className="font-bold text-xl mb-3 text-slate-900 font-outfit">Document Translator</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">Translate Word docs between Arabic & English while keeping fonts, tables, and RTL/LTR layout.</p>
+            <div className="mt-6 flex items-center text-emerald-600 font-semibold text-sm gap-1 group-hover:translate-x-2 transition-transform">
+              Launch Tool <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </div>
+          </Link>
         </div>
       </section>
     </div>

@@ -34,6 +34,7 @@ async def upload_file(
     file: UploadFile = File(...),
     toolType: str = Form(...),
     clientExtractedText: Optional[str] = Form(None),
+    translationDirection: Optional[str] = Form(None),
 ):
     """
     Upload a file for processing. Supports Hybrid Mode (Client OCR + Backend AI Review).
@@ -57,7 +58,10 @@ async def upload_file(
     
     original_name = file.filename or "upload"
     ext = Path(original_name).suffix.lower()
-    file_path = upload_dir / f"source{ext}"
+    if translationDirection:
+        file_path = upload_dir / f"source___{translationDirection}{ext}"
+    else:
+        file_path = upload_dir / f"source{ext}"
     
     async with aiofiles.open(file_path, "wb") as f:
         await f.write(file_content)
@@ -279,7 +283,76 @@ async def download_result(job_id: str):
             except Exception as e:
                 print(f"[fileMind-API] Compression failed: {e}")
 
+        # --- NEW: High-Fidelity Document Translation ---
+        if row["tool_type"] == ToolType.DOCUMENT_TRANSLATION.value:
+            try:
+                direction = "en-ar"
+                if "___" in source_file.name:
+                    direction = source_file.stem.split("___")[-1]
+                
+                # Lazy import to avoid cold start impact
+                from docx import Document
+                from docx.enum.text import WD_ALIGN_PARAGRAPH
+                from deep_translator import GoogleTranslator
+                from docx.oxml.shared import OxmlElement
+                
+                translated_path = base_temp / f"translated_{job_id}.docx"
+                doc = Document(str(source_file))
+                
+                # Setup Google Translate via deep_translator
+                source_lang = "en" if direction == "en-ar" else "ar"
+                target_lang = "ar" if direction == "en-ar" else "en"
+                translator = GoogleTranslator(source=source_lang, target=target_lang)
+                
+                print(f"[fileMind] Translating Document {job_id} direction: {direction}")
+                
+                def translate_and_align_paragraph(p):
+                    if p.text.strip():
+                        try:
+                            translated_text = translator.translate(p.text)
+                            p.text = translated_text
+                            
+                            # Adjust BiDi and Alignment
+                            if target_lang == "ar":
+                                p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                                pPr = p._p.get_or_add_pPr()
+                                bidi = pPr.find('.//w:bidi')
+                                if bidi is None:
+                                    bidi = OxmlElement('w:bidi')
+                                    pPr.append(bidi)
+                            else:
+                                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                                pPr = p._p.get_or_add_pPr()
+                                bidi = pPr.find('.//w:bidi')
+                                if bidi is not None:
+                                    pPr.remove(bidi)
+                        except Exception as p_e:
+                            print(f"[fileMind] Paragraph translation skipped: {p_e}")
+
+                # Translate standard paragraphs
+                for paragraph in doc.paragraphs:
+                    translate_and_align_paragraph(paragraph)
+                
+                # Translate table contents
+                for table in doc.tables:
+                    for row_tbl in table.rows:
+                        for cell in row_tbl.cells:
+                            for paragraph in cell.paragraphs:
+                                translate_and_align_paragraph(paragraph)
+                
+                doc.save(str(translated_path))
+                
+                return FileResponse(
+                    path=str(translated_path),
+                    filename=f"fileMind_Translated_{source_file.stem.split('___')[0]}.docx",
+                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            except Exception as e:
+                print(f"[fileMind-API] Document translation failed: {e}")
+                raise HTTPException(status_code=500, detail=f"Translation failed: {e}")
+
         # --- NEW: High-Fidelity conversion for Demo mode ---
+
         if source_file.suffix.lower() == ".pdf" and Converter is not None:
             try:
                 word_path = base_temp / f"converted_{job_id}.docx"

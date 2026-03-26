@@ -11,6 +11,7 @@ export const MAX_FILE_SIZES = {
     [ToolType.AUDIO_TO_TEXT]: 50 * 1024 * 1024, // 50MB
     [ToolType.EXCEL_ANALYZER]: 50 * 1024 * 1024, // 50MB
     [ToolType.COMPRESS_FILES]: 100 * 1024 * 1024, // 100MB
+    [ToolType.DOCUMENT_TRANSLATION]: 50 * 1024 * 1024, // 50MB
 } as const;
 
 // Default limit if tool is not mapped individually

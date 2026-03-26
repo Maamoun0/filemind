@@ -53,6 +53,7 @@ export enum ToolType {
 
     // Generic Tools
     COMPRESS_FILES = 'compress-files',
+    DOCUMENT_TRANSLATION = 'document-translation',
 }
 
 export interface JobRecord {

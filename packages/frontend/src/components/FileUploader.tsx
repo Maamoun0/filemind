@@ -10,6 +10,7 @@ interface FileUploaderProps {
     toolType: ToolType;
     maxSizeMB: number;
     acceptedMimeTypes: string;
+    extraFields?: Record<string, string>;
     onSuccess?: (jobId: string) => void;
 }
 
@@ -17,6 +18,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     toolType,
     maxSizeMB,
     acceptedMimeTypes,
+    extraFields,
     onSuccess,
 }) => {
     const [file, setFile] = useState<File | null>(null);
@@ -96,6 +98,12 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         const formData = new FormData();
         formData.append('file', file);
         formData.append('toolType', toolType);
+        
+        if (extraFields) {
+            Object.entries(extraFields).forEach(([key, value]) => {
+                formData.append(key, value);
+            });
+        }
 
         try {
             // --- ARCHITECTURE UPDATE: Client-Side Processing Hook ---

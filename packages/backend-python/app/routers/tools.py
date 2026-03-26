@@ -119,8 +119,9 @@ async def upload_file(
         )
 
     # --- VERCEL / SERVERLESS OPTIMIZATION ---
-    # On Vercel, we don't have background workers. We auto-complete the job for the demo flow.
-    if os.getenv("VERCEL"):
+    # On Vercel, we don't have background workers. We auto-complete the job for the demo flow,
+    # EXCEPT for the translation tool which NEEDS to run the engine.
+    if os.getenv("VERCEL") and tool_type != ToolType.DOCUMENT_TRANSLATION:
         initial_status = JobStatus.COMPLETED.value
         review_status = "approved"
         review_conf = 0.98
@@ -140,6 +141,21 @@ async def upload_file(
             job_id=job_id,
             status=JobStatus.COMPLETED,
             message="File processed instantly (Serverless Demo Mode).",
+            expires_at=delete_at,
+        )
+
+    # For Translation on Vercel, we skip the background-only flow and return success
+    if os.getenv("VERCEL") and tool_type == ToolType.DOCUMENT_TRANSLATION:
+        if pool == "MOCK":
+            MOCK_JOBS[job_id]["status"] = JobStatus.COMPLETED.value
+        else:
+            async with pool.acquire() as conn:
+                await conn.execute("UPDATE jobs SET status = $1 WHERE id = $2", JobStatus.COMPLETED.value, uuid.UUID(job_id))
+        
+        return JobResponse(
+            job_id=job_id,
+            status=JobStatus.COMPLETED,
+            message="Translation initialized. Click Download to start processing.",
             expires_at=delete_at,
         )
 

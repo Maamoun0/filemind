@@ -52,7 +52,7 @@ async def upload_file(
     job_id = str(uuid.uuid4())
     
     # On Serverless, /tmp is the only writable directory
-    temp_dir = Path("/tmp" if os.getenv("VERCEL") else settings.TEMP_DIR)
+    temp_dir = Path("/tmp" if (os.getenv("VERCEL") or os.getenv("RENDER")) else settings.TEMP_DIR)
     upload_dir = temp_dir / "uploads" / job_id
     upload_dir.mkdir(parents=True, exist_ok=True)
     
@@ -118,10 +118,12 @@ async def upload_file(
             expires_at=delete_at,
         )
 
-    # --- VERCEL / SERVERLESS OPTIMIZATION ---
-    # On Vercel, we don't have background workers. We auto-complete the job for the demo flow,
+    # --- SERVERLESS OPTIMIZATION ---
+    # On Serverless (Vercel, Render Demo), we don't have background workers. We auto-complete the job for the demo flow,
     # EXCEPT for the translation and PDF tools which NEED to run the engine.
-    if os.getenv("VERCEL") and tool_type not in (ToolType.DOCUMENT_TRANSLATION, ToolType.PDF_TO_WORD):
+    is_serverless = bool(os.getenv("VERCEL") or os.getenv("RENDER"))
+    
+    if is_serverless and tool_type not in (ToolType.DOCUMENT_TRANSLATION, ToolType.PDF_TO_WORD):
         initial_status = JobStatus.COMPLETED.value
         review_status = "approved"
         review_conf = 0.98
@@ -144,8 +146,8 @@ async def upload_file(
             expires_at=delete_at,
         )
 
-    # For Translation & PDF to Word on Vercel, we skip the background-only flow and return success to initiate processing loop
-    if os.getenv("VERCEL") and tool_type in (ToolType.DOCUMENT_TRANSLATION, ToolType.PDF_TO_WORD):
+    # For Translation & PDF to Word on Serverless, we skip the background-only flow and return success to initiate processing loop
+    if is_serverless and tool_type in (ToolType.DOCUMENT_TRANSLATION, ToolType.PDF_TO_WORD):
         if pool == "MOCK":
             MOCK_JOBS[job_id]["status"] = JobStatus.COMPLETED.value
         else:
@@ -251,8 +253,8 @@ async def download_result(job_id: str):
     
     # Path based check (Result/Output)
     settings = get_settings()
-    is_vercel = os.getenv("VERCEL")
-    base_temp = Path("/tmp" if is_vercel else settings.TEMP_DIR)
+    is_serverless = bool(os.getenv("VERCEL") or os.getenv("RENDER"))
+    base_temp = Path("/tmp" if is_serverless else settings.TEMP_DIR)
     
     output_dir = base_temp / "outputs" / job_id
     if output_dir.exists() and list(output_dir.iterdir()):

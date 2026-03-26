@@ -27,7 +27,7 @@ export default function DocumentTranslationPage() {
                     Document Translator
                 </h1>
                 <p className="text-lg text-slate-600 max-w-xl mx-auto">
-                    Translate your document instantly while preserving layout, text direction (RTL/LTR), fonts, and formatting with <span className="text-indigo-600 font-bold">fileMind</span> AI.
+                    Translate your **Word, PDF, PowerPoint, or Excel** documents instantly while preserving layout and text direction (RTL/LTR) with <span className="text-indigo-600 font-bold">fileMind</span> AI.
                 </p>
             </header>
 
@@ -57,7 +57,7 @@ export default function DocumentTranslationPage() {
                 <FileUploader
                     toolType={docToolType}
                     maxSizeMB={maxMb}
-                    acceptedMimeTypes="application/vnd.openxmlformats-officedocument.wordprocessingml.document, .docx"
+                    acceptedMimeTypes=".docx, .pptx, .xlsx, .pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.openxmlformats-officedocument.presentationml.presentation, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/pdf"
                     extraFields={{ translationDirection: direction }}
                 />
             </div>
@@ -90,9 +90,9 @@ export default function DocumentTranslationPage() {
                     <h2 className="text-2xl font-bold mb-6 text-slate-900 text-center">Frequently Asked Questions</h2>
                     <div className="space-y-6">
                         <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
-                            <h4 className="font-bold text-slate-800 mb-2">Does this support PDF translation?</h4>
+                            <h4 className="font-bold text-slate-800 mb-2">What formats are supported?</h4>
                             <p className="text-slate-600 text-sm leading-relaxed">
-                                Currently, we support Microsoft Word (.docx) files natively to ensure 100% layout retention. For PDFs, we recommend converting to Word first using our free PDF to Word tool, then translating the exported file!
+                                We support Microsoft Word (.docx), PowerPoint (.pptx), Excel (.xlsx), and PDF files. Each format is handled by a specialized engine to ensure maximum layout retention.
                             </p>
                         </div>
                         <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">

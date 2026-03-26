@@ -327,7 +327,7 @@ async def download_result(job_id: str):
                         if bidi is not None:
                             pPr.remove(bidi)
 
-                source_lang = "en" if direction == "en-ar" else "ar"
+                source_lang = "auto" # Auto-detect handles mixed content much better
                 target_lang = "ar" if direction == "en-ar" else "en"
                 translator = GoogleTranslator(source=source_lang, target=target_lang)
                 
@@ -339,9 +339,13 @@ async def download_result(job_id: str):
                     def translate_docx_p(p):
                         if p.text.strip():
                             try:
-                                p.text = translator.translate(p.text)
+                                # Break down huge paragraphs if needed, though 5k is usually enough
+                                translated_text = translator.translate(p.text[:4999])
+                                if translated_text:
+                                    p.text = translated_text
                                 apply_alignment(p, target_lang)
-                            except: pass
+                            except Exception as e: 
+                                print(f"[fileMind-API] DOCX Paragraph translation error: {e}")
 
                     for p in doc.paragraphs: translate_docx_p(p)
                     for table in doc.tables:
@@ -366,8 +370,13 @@ async def download_result(job_id: str):
                             if not shape.has_text_frame: continue
                             for paragraph in shape.text_frame.paragraphs:
                                 if paragraph.text.strip():
-                                    paragraph.text = translator.translate(paragraph.text)
-                                    paragraph.alignment = PP_ALIGN.RIGHT if target_lang == "ar" else PP_ALIGN.LEFT
+                                    try:
+                                        translated_text = translator.translate(paragraph.text[:4999])
+                                        if translated_text:
+                                            paragraph.text = translated_text
+                                        paragraph.alignment = PP_ALIGN.RIGHT if target_lang == "ar" else PP_ALIGN.LEFT
+                                    except Exception as e:
+                                        print(f"[fileMind-API] PPTX Slide translation error: {e}")
                     prs.save(str(translated_path := base_temp / f"translated_{job_id}.pptx"))
                     return FileResponse(
                         path=str(translated_path), 
@@ -384,8 +393,13 @@ async def download_result(job_id: str):
                         for row_cells in sheet.iter_rows():
                             for cell in row_cells:
                                 if isinstance(cell.value, str) and cell.value.strip():
-                                    cell.value = translator.translate(cell.value)
-                                    cell.alignment = openpyxl.styles.Alignment(horizontal='right' if target_lang == "ar" else 'left')
+                                    try:
+                                        translated_text = translator.translate(cell.value[:4999])
+                                        if translated_text:
+                                            cell.value = translated_text
+                                        cell.alignment = openpyxl.styles.Alignment(horizontal='right' if target_lang == "ar" else 'left')
+                                    except Exception as e:
+                                        print(f"[fileMind-API] XLSX Cell translation error: {e}")
                     wb.save(str(translated_path := base_temp / f"translated_{job_id}.xlsx"))
                     return FileResponse(
                         path=str(translated_path), 

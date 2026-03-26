@@ -29,6 +29,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [jobId, setJobId] = useState<string | null>(null);
     const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // AI Double-Check review state
@@ -284,6 +285,37 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         }, 1500); // Faster polling to catch REVIEWING phase
     };
 
+    const handleDownload = async (id: string, fileName: string) => {
+        setIsDownloading(true);
+        try {
+            const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/download/${id}`;
+            const response = await fetch(downloadUrl);
+            
+            if (!response.ok) throw new Error('Download failed');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            
+            // Reconstruct a professional filename
+            const extension = fileName.split('.').pop();
+            const cleanName = fileName.split('.')[0].replace('fileMind_Translated_', '');
+            a.download = `fileMind_Translated_${cleanName}.${extension}`;
+            
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error('[fileMind] Download error:', err);
+            setError('Failed to download the translated file. Please try again.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
 
     return (
         <div className="w-full max-w-2xl mx-auto mt-8">
@@ -383,13 +415,21 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                         <CheckCircle size={20} />
                                         <span className="font-bold">Completed & Verified by AI Experts!</span>
                                     </div>
-                                    <a
-                                        href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/download/${jobId}`}
-                                        className="btn-primary w-full py-3 mt-2 text-lg text-center inline-block"
+                                    <button
+                                        onClick={() => handleDownload(jobId, file.name)}
+                                        disabled={isDownloading}
+                                        className="btn-primary w-full py-3 mt-2 text-lg text-center flex items-center justify-center gap-2"
                                     >
-                                        Download Verified Result
-                                    </a>
-                                    <button onClick={clearFile} className="btn-secondary w-full py-2 text-sm mt-1">
+                                        {isDownloading ? (
+                                            <>
+                                                <Loader2 className="animate-spin" size={20} />
+                                                Preparing Download...
+                                            </>
+                                        ) : (
+                                            'Download Verified Result'
+                                        )}
+                                    </button>
+                                    <button onClick={clearFile} disabled={isDownloading} className="btn-secondary w-full py-2 text-sm mt-1">
                                         Process Another File
                                     </button>
                                 </div>

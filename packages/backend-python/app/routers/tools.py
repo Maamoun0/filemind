@@ -120,8 +120,8 @@ async def upload_file(
 
     # --- VERCEL / SERVERLESS OPTIMIZATION ---
     # On Vercel, we don't have background workers. We auto-complete the job for the demo flow,
-    # EXCEPT for the translation tool which NEEDS to run the engine.
-    if os.getenv("VERCEL") and tool_type != ToolType.DOCUMENT_TRANSLATION:
+    # EXCEPT for the translation and PDF tools which NEED to run the engine.
+    if os.getenv("VERCEL") and tool_type not in (ToolType.DOCUMENT_TRANSLATION, ToolType.PDF_TO_WORD):
         initial_status = JobStatus.COMPLETED.value
         review_status = "approved"
         review_conf = 0.98
@@ -144,8 +144,8 @@ async def upload_file(
             expires_at=delete_at,
         )
 
-    # For Translation on Vercel, we skip the background-only flow and return success
-    if os.getenv("VERCEL") and tool_type == ToolType.DOCUMENT_TRANSLATION:
+    # For Translation & PDF to Word on Vercel, we skip the background-only flow and return success to initiate processing loop
+    if os.getenv("VERCEL") and tool_type in (ToolType.DOCUMENT_TRANSLATION, ToolType.PDF_TO_WORD):
         if pool == "MOCK":
             MOCK_JOBS[job_id]["status"] = JobStatus.COMPLETED.value
         else:
@@ -431,31 +431,70 @@ async def download_result(job_id: str):
             try:
                 word_path = base_temp / f"converted_{job_id}.docx"
                 
-                # 1. Use pdf2docx for high-fidelity conversion (tables, layout)
-                cv = Converter(str(source_file))
-                cv.convert(str(word_path), start=0, multi_processing=False)
-                cv.close()
+                # Pre-flight check: Is it a scanned PDF?
+                import fitz
+                doc_pdf = fitz.open(str(source_file))
+                total_text = sum(len(page.get_text().strip()) for page in doc_pdf)
+                is_scanned = total_text < (len(doc_pdf) * 50)
+                
+                if is_scanned and Document is not None:
+                    print(f"[fileMind-API] Detected scanned PDF. Initializing ONNX OCR Engine for {job_id}...")
+                    from rapidocr_onnxruntime import RapidOCR
+                    import numpy as np
+                    import cv2
+                    
+                    ocr = RapidOCR()
+                    doc = Document()
+                    
+                    for page in doc_pdf:
+                        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                        img = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.h, pix.w, pix.n))
+                        
+                        if pix.n == 4:
+                            img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+                        elif pix.n == 1:
+                            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                            
+                        ocr_result, _ = ocr(img)
+                        if ocr_result:
+                            # Join all detected text lines
+                            page_text = "\n".join([line[1] for line in ocr_result])
+                            p = doc.add_paragraph(page_text)
+                            
+                            # Auto-align Arabic/RTL strings
+                            if any("\u0600" <= c <= "\u06FF" for c in page_text):
+                                p.alignment = getattr(WD_ALIGN_PARAGRAPH, 'RIGHT', 2)
+                                
+                    doc.save(str(word_path))
+                else:
+                    # Standard high-fidelity conversion for text-based PDFs
+                    cv = Converter(str(source_file))
+                    cv.convert(str(word_path), start=0, multi_processing=False)
+                    cv.close()
                 
                 # 2. Add a discreet brand info instead of a giant header
-                if Document is not None and WD_ALIGN_PARAGRAPH is not None:
-                    doc = Document(word_path)
-                    section = doc.sections[0]
-                    footer = section.footer
-                    p = footer.paragraphs[0]
-                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                    run = p.add_run(f"Processed by fileMind — Secure & Smart")
-                    run.font.size = 80000 # ~8pt
-                    doc.save(word_path)
+                if Document is not None and WD_ALIGN_PARAGRAPH is not None and word_path.exists():
+                    try:
+                        doc = Document(word_path)
+                        section = doc.sections[0]
+                        footer = section.footer
+                        p = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
+                        p.alignment = getattr(WD_ALIGN_PARAGRAPH, 'RIGHT', 2)
+                        run = p.add_run(f"Processed by fileMind — Secure & Smart")
+                        run.font.size = 80000 # ~8pt
+                        doc.save(word_path)
+                    except Exception as foot_err:
+                        print(f"Skipping branding: {foot_err}")
 
                 return FileResponse(
                     path=str(word_path),
                     filename=f"fileMind_Converted_{source_file.stem}.docx",
                     media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 )
-            except ImportError:
-                print("[fileMind-API] pdf2docx or python-docx not installed. Cannot perform high-fidelity conversion.")
+            except ImportError as ie:
+                print(f"[fileMind-API] Missing dependency for PDF processing: {ie}")
             except Exception as e:
-                print(f"[fileMind-API] High-fidelity conversion failed: {e}")
+                print(f"[fileMind-API] High-fidelity or OCR conversion failed: {e}")
 
         return FileResponse(
             path=str(source_file),

@@ -6,7 +6,9 @@ import { ToolType, MAX_FILE_SIZES } from '@filemind/shared';
 import { ArrowLeftRight, Languages } from 'lucide-react';
 
 export default function DocumentTranslationPage() {
-    const maxMb = MAX_FILE_SIZES[ToolType.DOCUMENT_TRANSLATION] / (1024 * 1024);
+    // Defensive access to ToolType to avoid build errors if the shared package is not fully synced
+    const docToolType = (ToolType as any).DOCUMENT_TRANSLATION || 'document-translation';
+    const maxMb = (MAX_FILE_SIZES as any)[docToolType] ? (MAX_FILE_SIZES as any)[docToolType] / (1024 * 1024) : 50;
     
     // Direction: 'en-ar' means English to Arabic, 'ar-en' means Arabic to English
     const [direction, setDirection] = useState<'en-ar' | 'ar-en'>('en-ar');
@@ -53,7 +55,7 @@ export default function DocumentTranslationPage() {
             {/* Main interactive Uploader Tool */}
             <div className="animate-fade-in">
                 <FileUploader
-                    toolType={ToolType.DOCUMENT_TRANSLATION}
+                    toolType={docToolType}
                     maxSizeMB={maxMb}
                     acceptedMimeTypes="application/vnd.openxmlformats-officedocument.wordprocessingml.document, .docx"
                     extraFields={{ translationDirection: direction }}

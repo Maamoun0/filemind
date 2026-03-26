@@ -53,6 +53,7 @@ class ToolType(str, Enum):
     
     # Generic Tools
     COMPRESS_FILES = "compress-files"
+    DOCUMENT_TRANSLATION = "document-translation"
 
 
 # ── Tool-specific max file sizes (bytes) ──
@@ -102,6 +103,16 @@ ALLOWED_MAGIC_TYPES: dict[ToolType, list[str]] = {
         "application/x-zip-compressed",
     ],
     ToolType.COMPRESS_FILES: ["*"], # Allow all types for compression
+    ToolType.DOCUMENT_TRANSLATION: [
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/pdf",
+        "application/zip", # Office files are often detected as zip
+        "application/msword",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint"
+    ],
 }
 
 

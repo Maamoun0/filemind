@@ -1,0 +1,21 @@
+fastapi
+uvicorn
+python-multipart
+python-magic
+asyncpg
+redis
+pandas
+openpyxl
+slowapi
+pydantic
+pydantic-settings
+python-dotenv
+aiofiles
+mangum
+pymupdf
+# OCR
+pytesseract
+pdf2image
+Pillow
+arabic-reshaper
+python-bidi

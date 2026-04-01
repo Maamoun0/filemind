@@ -50,6 +50,10 @@ export enum ToolType {
 
     // Smart Tools
     EXCEL_ANALYZER = 'excel-analyzer',
+
+    // Generic Tools
+    COMPRESS_FILES = 'compress-files',
+    DOCUMENT_TRANSLATION = 'document-translation',
 }
 
 export interface JobRecord {

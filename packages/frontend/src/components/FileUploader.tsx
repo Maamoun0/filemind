@@ -96,159 +96,42 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         setIsUploading(true);
         setError(null);
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('toolType', toolType);
-        
-        if (extraFields) {
-            Object.entries(extraFields).forEach(([key, value]) => {
-                formData.append(key, value);
-            });
-        }
-
         try {
-            // --- ARCHITECTURE UPDATE: Client-Side Processing Hook ---
-            console.log(`[fileMind] Attempting browser-side processing for ${toolType}...`);
+            // 1. طلب رابط الرفع المباشر
+            const urlResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/get-presigned-url?filename=${encodeURIComponent(file.name)}&tool_type=${toolType}`, {
+                method: 'POST',
+            });
+            const { url, key } = await urlResponse.json();
 
-            let clientResult = null;
+            // 2. رفع الملف مباشرة إلى السحابة
+            const uploadResponse = await fetch(url, {
+                method: 'PUT',
+                body: file,
+                headers: { 'Content-Type': file.type },
+            });
 
-            if (toolType === ToolType.OCR_IMAGE) {
-                const ocrWorker = createOCRWorker();
-                try {
-                    // Make client-side worker processing optional so it doesn't block upload on worker crashes.
-                    // Use optional chaining for safer access.
-                    clientResult = await ocrWorker?.processTask('PROCESS_OCR', { file });
-                    console.log('[fileMind] Client-side OCR Success:', clientResult);
-                    if (clientResult) {
-                        formData.append('clientExtractedText', clientResult);
-                    }
-                } catch (workerErr) {
-                    console.warn('[fileMind] Client-side OCR Worker failed, falling back to server-only:', workerErr);
-                } finally {
-                    ocrWorker.terminate();
-                }
-            } else if (toolType === ToolType.PDF_TO_WORD) {
-                // PDF client processing is optional (metadata only), so we ignore failures
-                const pdfWorker = createPDFWorker();
-                try {
-                    const reader = new FileReader();
-                    const arrayBuffer = await new Promise<ArrayBuffer>((res, rej) => {
-                        reader.onload = () => res(reader.result as ArrayBuffer);
-                        reader.onerror = rej;
-                        reader.readAsArrayBuffer(file);
-                    });
-                    const analysis = await pdfWorker.processTask('PROCESS_PDF_METADATA', { arrayBuffer });
-                    console.log('[fileMind] Client-side PDF Analysis:', analysis);
-                } catch (workerErr) {
-                    console.warn('[fileMind] PDF Worker failed, skipping metadata extraction:', workerErr);
-                } finally {
-                    pdfWorker.terminate();
-                }
-            } else if (toolType === ToolType.COMPRESS_PDF) {
-                const pdfWorker = createPDFWorker();
-                try {
-                    setJobStatus(JobStatus.PROCESSING);
-                    const reader = new FileReader();
-                    const arrayBuffer = await new Promise<ArrayBuffer>((res, rej) => {
-                        reader.onload = () => res(reader.result as ArrayBuffer);
-                        reader.onerror = rej;
-                        reader.readAsArrayBuffer(file);
-                    });
-                    const result = await pdfWorker.processTask('COMPRESS_PDF', { arrayBuffer });
-                    console.log('[fileMind] Client-side Compression Success:', result);
-                    
-                    // Direct Download for client-side tools
-                    const blob = new Blob([result.output], { type: 'application/pdf' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = result.filename;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    setJobStatus(JobStatus.COMPLETED);
-                    setIsUploading(false);
-                    return; // Stop here for purely client-side tools
-                } catch (workerErr) {
-                    console.error('[fileMind] PDF Compression failed:', workerErr);
-                    throw workerErr;
-                } finally {
-                    pdfWorker.terminate();
-                }
-            } else if (toolType === ToolType.SPLIT_PDF) {
-                const pdfWorker = createPDFWorker();
-                try {
-                    setJobStatus(JobStatus.PROCESSING);
-                    const reader = new FileReader();
-                    const arrayBuffer = await new Promise<ArrayBuffer>((res, rej) => {
-                        reader.onload = () => res(reader.result as ArrayBuffer);
-                        reader.onerror = rej;
-                        reader.readAsArrayBuffer(file);
-                    });
-                    // Split first 5 pages as a demo since we don't have range picker yet
-                    const result = await pdfWorker.processTask('SPLIT_PDF', { 
-                        arrayBuffer, 
-                        ranges: [[0, Math.min(4, 100)]] 
-                    });
-                    
-                    const blob = new Blob([result.outputs[0].buffer], { type: 'application/pdf' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `fileMind_Split_${file.name}`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    setJobStatus(JobStatus.COMPLETED);
-                    setIsUploading(false);
-                    return;
-                } catch (workerErr) {
-                    console.error('[fileMind] PDF Split failed:', workerErr);
-                    throw workerErr;
-                } finally {
-                    pdfWorker.terminate();
-                }
-            }
+            if (!uploadResponse.ok) throw new Error('Failed to upload file to storage');
 
-            // Architecture: On Vercel, we leverage Hybrid Processing
-            // Client handles heavy lifting (OCR), Backend handles AI verification
-            const hybridMode = true; 
+            // 3. إبلاغ الخلفية ببدء المعالجة
+            const formData = new FormData();
+            formData.append('key', key);
+            formData.append('tool_type', toolType);
+            formData.append('original_name', file.name);
 
-            if (!hybridMode) {
-                setJobStatus(JobStatus.COMPLETED);
-                setIsUploading(false);
-                return;
-            }
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/upload`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/start-s3-processing`, {
                 method: 'POST',
                 body: formData,
             });
 
             const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to start processing');
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to upload file');
-            }
-
-            const finalJobId = data.jobId || data.job_id;
-            setJobId(finalJobId);
+            setJobId(data.job_id);
             setJobStatus(data.status);
-            if (onSuccess && finalJobId) onSuccess(finalJobId);
-
-            // Start Polling process...
-            if (finalJobId) {
-                pollJobStatus(finalJobId);
-            }
+            pollJobStatus(data.job_id);
 
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                setError(err.message || 'An unexpected error occurred during upload.');
-            } else {
-                setError('An unexpected error occurred during upload.');
-            }
+            setError(err instanceof Error ? err.message : 'Upload failed');
         } finally {
             setIsUploading(false);
         }

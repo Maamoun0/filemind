@@ -4,12 +4,14 @@ import { ToolType } from '../types';
 // Constants for Strict Limits (Security & Privacy rules)
 // These apply per file upload based on tool category.
 export const MAX_FILE_SIZES = {
-    [ToolType.PDF_TO_WORD]: 50 * 1024 * 1024, // 50MB
-    [ToolType.COMPRESS_PDF]: 100 * 1024 * 1024, // 100MB
-    [ToolType.AI_SUMMARY_PDF]: 20 * 1024 * 1024, // 20MB (Requires parsing content)
-    [ToolType.OCR_IMAGE]: 15 * 1024 * 1024, // 15MB
-    [ToolType.AUDIO_TO_TEXT]: 50 * 1024 * 1024, // 50MB
-    [ToolType.EXCEL_ANALYZER]: 50 * 1024 * 1024, // 50MB
+    [ToolType.PDF_TO_WORD]: 100 * 1024 * 1024, // 100MB
+    [ToolType.COMPRESS_PDF]: 150 * 1024 * 1024, // 150MB
+    [ToolType.AI_SUMMARY_PDF]: 50 * 1024 * 1024, // 50MB
+    [ToolType.OCR_IMAGE]: 25 * 1024 * 1024, // 25MB
+    [ToolType.AUDIO_TO_TEXT]: 100 * 1024 * 1024, // 100MB
+    [ToolType.EXCEL_ANALYZER]: 100 * 1024 * 1024, // 100MB
+    [ToolType.COMPRESS_FILES]: 150 * 1024 * 1024, // 150MB
+    [ToolType.DOCUMENT_TRANSLATION]: 100 * 1024 * 1024, // 100MB
 } as const;
 
 // Default limit if tool is not mapped individually

@@ -1,98 +1,94 @@
-import os, uuid, aiofiles
+import uuid, aiofiles
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
-
 from ..models.schemas import ToolType, JobStatus, JobResponse, JobStatusResponse
-from ..security.magic_validator import validate_file_magic
 from ..services.database import get_db_pool
-from ..services.queue import add_job_to_queue
-from ..config import get_settings
+from ..services.pdf_service import process_pdf_to_word
 
 router = APIRouter(prefix="/api/tools", tags=["Tools"])
 
+# Simple In-memory Job Store for MOCK mode
+job_store = {}
+
 @router.post("/upload", response_model=JobResponse, status_code=202)
 async def upload_file(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     toolType: str = Form(...),
-    clientExtractedText: Optional[str] = Form(None),
 ):
-    settings = get_settings()
     try:
         tool_enum = ToolType(toolType)
     except ValueError:
         raise HTTPException(400, detail="Invalid tool type")
         
-    file_content = await file.read()
-    validate_file_magic(file_content, file.filename)
-    
     job_id = str(uuid.uuid4())
     temp_dir = Path("/tmp")
-    upload_dir = temp_dir / "uploads" / job_id
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_path = temp_dir / "uploads" / job_id / f"original{Path(file.filename or '').suffix}"
+    output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.docx"
     
-    file_ext = Path(file.filename or "upload").suffix
-    file_path = upload_dir / f"source{file_ext}"
+    upload_path.parent.mkdir(parents=True, exist_ok=True)
     
-    async with aiofiles.open(file_path, "wb") as f:
+    # Write file to persistent tmp storage
+    file_content = await file.read()
+    async with aiofiles.open(upload_path, "wb") as f:
         await f.write(file_content)
         
-    delete_at = datetime.utcnow() + timedelta(hours=24)
-    # await add_job_to_queue(job_id, tool_enum.value, str(file_path), file.filename or "upload")
+    # Store initial status
+    job_store[job_id] = {
+        "status": JobStatus.PROCESSING,
+        "tool_type": tool_enum,
+        "created_at": datetime.utcnow()
+    }
     
+    # Task to run conversion
+    async def run_conversion():
+        try:
+            if tool_enum == ToolType.PDF_TO_WORD:
+                await process_pdf_to_word(job_id, str(upload_path), str(output_path))
+                job_store[job_id]["status"] = JobStatus.COMPLETED
+            else:
+                # Other tools still mock for now
+                job_store[job_id]["status"] = JobStatus.FAILED
+        except Exception as e:
+            job_store[job_id]["status"] = JobStatus.FAILED
+            print(f"[fileMind-Engine] Job {job_id} failed: {e}")
+
+    background_tasks.add_task(run_conversion)
+    
+    delete_at = datetime.utcnow() + timedelta(hours=1)
     return JobResponse(
         job_id=job_id, 
-        status=JobStatus.PENDING, 
-        message="Queued.", 
+        status=JobStatus.PROCESSING, 
+        message="Your file is being processed. Hold tight!", 
         expires_at=delete_at
     )
 
 @router.get("/status/{job_id}", response_model=JobStatusResponse)
 async def check_job_status(job_id: str):
-    pool = await get_db_pool()
-    if pool == "MOCK":
+    if job_id in job_store:
+        job = job_store[job_id]
         return JobStatusResponse(
             job_id=job_id,
-            status=JobStatus.COMPLETED,
-            tool_type="MOCK",
-            created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            status=job["status"],
+            tool_type=job["tool_type"]
         )
         
+    pool = await get_db_pool()
+    if pool == "MOCK":
+        raise HTTPException(404, detail="Job not found in cache")
+        
     async with pool.acquire() as conn:
-        try:
-            row = await conn.fetchrow(
-                "SELECT id, status, tool_type, delete_at FROM jobs WHERE id = $1", 
-                uuid.UUID(job_id)
-            )
-        except Exception:
-            raise HTTPException(400, detail="Invalid job ID format")
-            
-        if not row:
-            raise HTTPException(404, detail="Job not found")
-            
-        return JobStatusResponse(
-            job_id=str(row["id"]),
-            status=row["status"],
-            tool_type=row["tool_type"],
-            created_at=datetime.utcnow(),
-            expires_at=row["delete_at"]
-        )
+        row = await conn.fetchrow("SELECT id, status, tool_type FROM jobs WHERE id = $1", uuid.UUID(job_id))
+        if not row: raise HTTPException(404)
+        return JobStatusResponse(job_id=str(row["id"]), status=row["status"], tool_type=row["tool_type"])
 
 @router.get("/download/{job_id}")
 async def download_result(job_id: str):
-    base_temp = Path("/tmp")
-    output_dir = base_temp / "outputs" / job_id
-    
+    output_dir = Path("/tmp") / "outputs" / job_id
     if output_dir.exists():
         files = list(output_dir.iterdir())
         if files:
-            result_file = files[0]
-            return FileResponse(
-                path=str(result_file), 
-                filename=f"result_{result_file.name}"
-            )
-            
-    raise HTTPException(404, detail="Result file not found")
+            return FileResponse(path=str(files[0]), filename=files[0].name)
+    raise HTTPException(404, detail="Converted file not found or expired.")

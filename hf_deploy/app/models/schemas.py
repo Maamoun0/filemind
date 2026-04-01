@@ -10,10 +10,14 @@ class JobStatus(str, Enum):
     FAILED = "FAILED"
 
 class ToolType(str, Enum):
-    OCR_ARABIC = "OCR_ARABIC"
-    OCR_LATIN = "OCR_LATIN"
-    TRANSLATION = "TRANSLATION"
-    EXCEL_STYLING = "EXCEL_STYLING"
+    PDF_TO_WORD = "pdf-to-word"
+    WORD_TO_PDF = "word-to-pdf"
+    COMPRESS_PDF = "compress-pdf"
+    OCR_IMAGE = "ocr-image"
+    AUDIO_TO_TEXT = "audio-to-text"
+    EXCEL_STYLING = "excel-styling"
+    DOCUMENT_TRANSLATION = "document-translation"
+    ROADMAP = "roadmap"
 
 class JobResult(BaseModel):
     extracted_text: Optional[str] = None

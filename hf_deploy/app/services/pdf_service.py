@@ -19,18 +19,38 @@ async def process_pdf_to_word(job_id: str, input_path: str, output_path: str):
         is_scanned = False
         try:
             doc = fitz.open(input_path)
-            empty_pages = 0
+            scanned_pages = 0
             num_pages = min(len(doc), 5) # Check first 5 pages max for speed
             
             for i in range(num_pages):
                 page = doc[i]
+                images = page.get_image_info()
                 text = page.get_text().strip()
-                # If page has extremely little text, it's effectively a scanned image or blank page
+                
+                is_page_scanned = False
+                
+                # Check 1: Extremely little text means it's an image/blank
                 if len(text) < 100:
-                    empty_pages += 1
+                    is_page_scanned = True
+                
+                # Check 2: Even if there is text (hidden OCR layer), check if there's a full-page image
+                if not is_page_scanned and images:
+                    page_area = page.rect.width * page.rect.height
+                    if page_area > 0:
+                        for img in images:
+                            box = img['bbox']
+                            width = box[2] - box[0]
+                            height = box[3] - box[1]
+                            # If a single image covers > 80% of the page, it's a scanned page
+                            if (width * height) / page_area > 0.8:
+                                is_page_scanned = True
+                                break
+                                
+                if is_page_scanned:
+                    scanned_pages += 1
             
-            # If majority of sampled pages are empty of text, mark as scanned
-            if num_pages > 0 and (empty_pages / num_pages) >= 0.5:
+            # If majority of sampled pages are scanned, mark as scanned
+            if num_pages > 0 and (scanned_pages / num_pages) >= 0.5:
                 is_scanned = True
                 
             doc.close()

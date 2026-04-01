@@ -34,6 +34,7 @@ class JobResponse(BaseModel):
 class JobStatusResponse(BaseModel):
     job_id: str
     status: JobStatus
+    tool_type: Optional[str] = None
     result: Optional[JobResult] = None
     error: Optional[str] = None
 

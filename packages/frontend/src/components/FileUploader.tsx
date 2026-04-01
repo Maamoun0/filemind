@@ -90,6 +90,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         }
     };
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+    // Normalize status from backend (UPPERCASE) to frontend enum (lowercase)
+    const normalizeStatus = (status: string): string => {
+        return status.toLowerCase();
+    };
+
     const handleUpload = async () => {
         if (!file) return;
 
@@ -97,41 +104,31 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         setError(null);
 
         try {
-            // 1. طلب رابط الرفع المباشر
-            const urlResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/get-presigned-url?filename=${encodeURIComponent(file.name)}&tool_type=${toolType}`, {
-                method: 'POST',
-            });
-            const { url, key } = await urlResponse.json();
-
-            // 2. رفع الملف مباشرة إلى السحابة
-            const uploadResponse = await fetch(url, {
-                method: 'PUT',
-                body: file,
-                headers: { 'Content-Type': file.type },
-            });
-
-            if (!uploadResponse.ok) throw new Error('Failed to upload file to storage');
-
-            // 3. إبلاغ الخلفية ببدء المعالجة
+            // Direct upload to backend server
             const formData = new FormData();
-            formData.append('key', key);
-            formData.append('tool_type', toolType);
-            formData.append('original_name', file.name);
+            formData.append('file', file);
+            formData.append('toolType', toolType);
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/start-s3-processing`, {
+            const response = await fetch(`${API_URL}/api/tools/upload`, {
                 method: 'POST',
                 body: formData,
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Failed to start processing');
+            if (!response.ok) throw new Error(data.detail || 'Failed to upload file');
 
-            setJobId(data.job_id);
-            setJobStatus(data.status);
-            pollJobStatus(data.job_id);
+            const finalJobId = data.job_id || data.jobId;
+            setJobId(finalJobId);
+            setJobStatus(normalizeStatus(data.status) as JobStatus);
+            if (onSuccess && finalJobId) onSuccess(finalJobId);
+
+            // Start polling for completion
+            if (finalJobId) {
+                pollJobStatus(finalJobId);
+            }
 
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Upload failed');
+            setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
         } finally {
             setIsUploading(false);
         }
@@ -140,21 +137,21 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     const pollJobStatus = async (id: string) => {
         const interval = setInterval(async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/status/${id}`);
+                const response = await fetch(`${API_URL}/api/tools/status/${id}`);
                 const data = await response.json();
 
                 if (response.ok) {
-                    setJobStatus(data.status);
+                    const normalized = normalizeStatus(data.status) as JobStatus;
+                    setJobStatus(normalized);
 
-                    // Capture AI Double-Check review info when available
                     if (data.reviewInfo) {
                         setReviewInfo(data.reviewInfo);
                     }
 
-                    if (data.status === JobStatus.COMPLETED || data.status === JobStatus.FAILED) {
+                    if (normalized === JobStatus.COMPLETED || normalized === JobStatus.FAILED) {
                         clearInterval(interval);
-                        if (data.status === JobStatus.FAILED) {
-                            setError(data.errorMessage || 'Job failed during processing.');
+                        if (normalized === JobStatus.FAILED) {
+                            setError(data.errorMessage || data.error || 'Job failed during processing.');
                         }
                     }
                 } else {
@@ -165,15 +162,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 clearInterval(interval);
                 setError('Failed to poll status.');
             }
-        }, 1500); // Faster polling to catch REVIEWING phase
+        }, 2000);
     };
 
     const handleDownload = async (id: string, fileName: string) => {
         setIsDownloading(true);
         try {
-            const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/tools/download/${id}`;
-            const response = await fetch(downloadUrl);
-            
+            const response = await fetch(`${API_URL}/api/tools/download/${id}`);
             if (!response.ok) throw new Error('Download failed');
             
             const blob = await response.blob();
@@ -181,11 +176,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            
-            // Reconstruct a professional filename
-            const extension = fileName.split('.').pop();
-            const cleanName = fileName.split('.')[0].replace('fileMind_Translated_', '');
-            a.download = `fileMind_Translated_${cleanName}.${extension}`;
+            a.download = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.docx`;
             
             document.body.appendChild(a);
             a.click();
@@ -193,7 +184,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             document.body.removeChild(a);
         } catch (err) {
             console.error('[fileMind] Download error:', err);
-            setError('Failed to download the translated file. Please try again.');
+            setError('Failed to download. Please try again.');
         } finally {
             setIsDownloading(false);
         }

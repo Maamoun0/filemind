@@ -18,6 +18,7 @@ class ToolType(str, Enum):
     EXCEL_STYLING = "excel-styling"
     DOCUMENT_TRANSLATION = "document-translation"
     ROADMAP = "roadmap"
+    COMPRESS_FILES = "compress-files"
 
 class JobResult(BaseModel):
     extracted_text: Optional[str] = None

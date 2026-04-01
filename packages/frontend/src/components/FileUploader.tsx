@@ -176,7 +176,23 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            a.download = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.docx`;
+            let outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.bin`;
+            
+            const disposition = response.headers.get('content-disposition');
+            if (disposition && disposition.indexOf('filename=') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    outFileName = matches[1].replace(/['"]/g, '');
+                }
+            } else {
+                // Fallback extensions based on toolType if header is missing
+                if (toolType === ToolType.PDF_TO_WORD) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.docx`;
+                else if (toolType === ToolType.COMPRESS_FILES) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.zip`;
+                else if (toolType === ToolType.OCR_IMAGE) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.txt`;
+            }
+
+            a.download = outFileName;
             
             document.body.appendChild(a);
             a.click();

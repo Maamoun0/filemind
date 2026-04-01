@@ -27,6 +27,10 @@ async def upload_file(
     temp_dir = Path("/tmp")
     upload_path = temp_dir / "uploads" / job_id / f"original{Path(file.filename or '').suffix}"
     output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.docx"
+    if tool_enum == ToolType.COMPRESS_FILES:
+        output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.zip"
+    elif tool_enum == ToolType.OCR_IMAGE:
+        output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.txt"
     
     upload_path.parent.mkdir(parents=True, exist_ok=True)
     
@@ -44,9 +48,18 @@ async def upload_file(
     
     # Task to run conversion
     async def run_conversion():
+        from ..services.compress_service import process_compress_file
+        from ..services.ocr_service import process_ocr_image
+        
         try:
             if tool_enum == ToolType.PDF_TO_WORD:
                 await process_pdf_to_word(job_id, str(upload_path), str(output_path))
+                job_store[job_id]["status"] = JobStatus.COMPLETED
+            elif tool_enum == ToolType.COMPRESS_FILES:
+                await process_compress_file(job_id, str(upload_path), str(output_path))
+                job_store[job_id]["status"] = JobStatus.COMPLETED
+            elif tool_enum == ToolType.OCR_IMAGE:
+                await process_ocr_image(job_id, str(upload_path), str(output_path))
                 job_store[job_id]["status"] = JobStatus.COMPLETED
             else:
                 # Other tools still mock for now

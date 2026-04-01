@@ -25,11 +25,11 @@ async def process_pdf_to_word(job_id: str, input_path: str, output_path: str):
             for i in range(num_pages):
                 page = doc[i]
                 text = page.get_text().strip()
-                # If page has very little text but has images, it's likely scanned
-                if len(text) < 50 and len(page.get_images()) > 0:
+                # If page has extremely little text, it's effectively a scanned image or blank page
+                if len(text) < 100:
                     empty_pages += 1
             
-            # If majority of sampled pages are empty (scanned images), mark as scanned
+            # If majority of sampled pages are empty of text, mark as scanned
             if num_pages > 0 and (empty_pages / num_pages) >= 0.5:
                 is_scanned = True
                 

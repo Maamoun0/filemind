@@ -9,9 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default function CompressFilesPage() {
-    // @ts-expect-error - Handle delay in type detection for new tool type
-    const toolType = ToolType.COMPRESS_FILES || ('compress-files' as any);
-    const maxMb = (MAX_FILE_SIZES as any)[toolType] / (1024 * 1024) || 100;
+    const toolType = ToolType.COMPRESS_FILES;
+    const maxMb = MAX_FILE_SIZES[toolType] / (1024 * 1024);
 
     return (
         <div className="max-w-4xl mx-auto pb-16">

@@ -6,9 +6,8 @@ import { ToolType, MAX_FILE_SIZES } from '@filemind/shared';
 import { ArrowLeftRight, Languages } from 'lucide-react';
 
 export default function DocumentTranslationPage() {
-    // Defensive access to ToolType to avoid build errors if the shared package is not fully synced
-    const docToolType = (ToolType as any).DOCUMENT_TRANSLATION || 'document-translation';
-    const maxMb = (MAX_FILE_SIZES as any)[docToolType] ? (MAX_FILE_SIZES as any)[docToolType] / (1024 * 1024) : 50;
+    const docToolType = ToolType.DOCUMENT_TRANSLATION;
+    const maxMb = MAX_FILE_SIZES[docToolType] / (1024 * 1024);
     
     // Direction: 'en-ar' means English to Arabic, 'ar-en' means Arabic to English
     const [direction, setDirection] = useState<'en-ar' | 'ar-en'>('en-ar');

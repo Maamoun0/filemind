@@ -13,6 +13,10 @@ export const MAX_FILE_SIZES = {
     [ToolType.EXCEL_ANALYZER]: 100 * 1024 * 1024, // 100MB
     [ToolType.COMPRESS_FILES]: 150 * 1024 * 1024, // 150MB
     [ToolType.DOCUMENT_TRANSLATION]: 100 * 1024 * 1024, // 100MB
+    [ToolType.MERGE_PDF]: 150 * 1024 * 1024, // 150MB
+    [ToolType.SPLIT_PDF]: 100 * 1024 * 1024, // 100MB
+    [ToolType.PDF_TO_JPG]: 100 * 1024 * 1024, // 100MB
+    [ToolType.JPG_TO_PDF]: 100 * 1024 * 1024, // 100MB
 } as const;
 
 // Default limit if tool is not mapped individually

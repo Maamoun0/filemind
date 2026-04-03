@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import Link from 'next/link';
 import './globals.css';
+import { UsageProvider } from '@/providers/UsageProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
@@ -53,7 +54,9 @@ export default function RootLayout({
         </header>
 
         <main className="flex-1 container mx-auto px-4 py-8">
-          {children}
+          <UsageProvider>
+            {children}
+          </UsageProvider>
         </main>
 
         <footer className="bg-slate-900 text-slate-400 py-12 text-sm mt-auto">

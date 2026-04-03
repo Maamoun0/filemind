@@ -1,9 +1,9 @@
 import uuid, aiofiles
 from datetime import datetime, timedelta
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Request, Response
 from ..models.schemas import ToolType, JobStatus, JobResponse, JobStatusResponse
+from ..services.usage_service import UsageService
 from ..services.database import get_db_pool
 from ..services.pdf_service import process_pdf_to_word, process_ocr_pdf_to_word
 
@@ -14,10 +14,21 @@ job_store = {}
 
 @router.post("/upload", response_model=JobResponse, status_code=202)
 async def upload_file(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     toolType: str = Form(...),
 ):
+    # Usage tracking
+    visitor_id = request.cookies.get("visitor_id") or "anonymous"
+    ip_address = request.headers.get("x-forwarded-for", "").split(",")[0] or request.client.host
+    
+    is_reached, current = UsageService.check_limit(visitor_id, ip_address)
+    if is_reached:
+        raise HTTPException(429, detail="لقد وصلت للحد اليومي لجميع العمليات. يرجى التسجيل للمتابعة.")
+    
+    UsageService.increment_usage(visitor_id, ip_address)
+    
     try:
         tool_enum = ToolType(toolType)
     except ValueError:
@@ -108,5 +119,8 @@ async def download_result(job_id: str):
     if output_dir.exists():
         files = list(output_dir.iterdir())
         if files:
-            return FileResponse(path=str(files[0]), filename=files[0].name)
+            # Viral Prefix Logic (P2)
+            original_filename = files[0].name
+            viral_filename = f"filemind_{original_filename}"
+            return FileResponse(path=str(files[0]), filename=viral_filename)
     raise HTTPException(404, detail="Converted file not found or expired.")

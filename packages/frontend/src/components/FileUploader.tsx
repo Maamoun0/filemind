@@ -5,6 +5,10 @@ import { UploadCloud, File as FileIcon, X, CheckCircle, AlertCircle, Loader2, Sc
 import { JobStatus, ToolType } from '@filemind/shared';
 import { createOCRWorker, createPDFWorker } from '@/lib/workers/worker-client';
 import { DoubleCheckBadge } from './DoubleCheckBadge';
+import { useUsageLimit } from '@/providers/UsageProvider';
+import LimitReachedModal from './modals/LimitReachedModal';
+import ShareModal from './share/ShareModal';
+import { Share2 } from 'lucide-react';
 
 interface FileUploaderProps {
     toolType: ToolType;
@@ -36,6 +40,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { isLimitReached, refreshUsage, usageCount, dailyLimit } = useUsageLimit();
+    const [showLimitModal, setShowLimitModal] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     // AI Double-Check review state
     const [reviewInfo, setReviewInfo] = useState<{
@@ -49,6 +56,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         setError(null);
         setJobId(null);
         setJobStatus(null);
+
+        if (isLimitReached) {
+            setShowLimitModal(true);
+            return;
+        }
 
         // Check file size limit
         if (selectedFile.size > maxSizeMB * 1024 * 1024) {
@@ -155,6 +167,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
                     if (normalized === JobStatus.COMPLETED || normalized === JobStatus.FAILED) {
                         clearInterval(interval);
+                        if (normalized === JobStatus.COMPLETED) {
+                            refreshUsage(); // Sync limit count
+                        }
                         if (normalized === JobStatus.FAILED) {
                             setError(data.errorMessage || data.error || 'Job failed during processing.');
                         }
@@ -345,20 +360,29 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                         <CheckCircle size={20} />
                                         <span className="font-bold">Completed & Verified by AI Experts!</span>
                                     </div>
-                                    <button
-                                        onClick={() => handleDownload(jobId, file.name)}
-                                        disabled={isDownloading}
-                                        className="btn-primary w-full py-3 mt-2 text-lg text-center flex items-center justify-center gap-2"
-                                    >
-                                        {isDownloading ? (
-                                            <>
-                                                <Loader2 className="animate-spin" size={20} />
-                                                Preparing Download...
-                                            </>
-                                        ) : (
-                                            'Download Verified Result'
-                                        )}
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleDownload(jobId, file.name)}
+                                            disabled={isDownloading}
+                                            className="btn-primary flex-1 py-3 mt-2 text-lg text-center flex items-center justify-center gap-2"
+                                        >
+                                            {isDownloading ? (
+                                                <>
+                                                    <Loader2 className="animate-spin" size={20} />
+                                                    Preparing...
+                                                </>
+                                            ) : (
+                                                'تحميل النتيجة ✅'
+                                            )}
+                                        </button>
+                                        <button 
+                                            onClick={() => setShowShareModal(true)}
+                                            className="mt-2 p-3 px-6 rounded-2xl bg-indigo-50 text-indigo-600 font-bold hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2"
+                                        >
+                                            <Share2 size={20} />
+                                            شارك
+                                        </button>
+                                    </div>
                                     <button onClick={clearFile} disabled={isDownloading} className="btn-secondary w-full py-2 text-sm mt-1">
                                         Process Another File
                                     </button>
@@ -384,6 +408,15 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                     )}
                 </div>
             )}
+
+            <div className="mt-4 text-center">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Daily Limit: {usageCount}/{dailyLimit} Operations
+                </span>
+            </div>
+
+            {showLimitModal && <LimitReachedModal onClose={() => setShowLimitModal(false)} />}
+            {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} url={window.location.href} />}
         </div>
     );
 };

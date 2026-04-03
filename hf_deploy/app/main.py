@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .services.database import get_db_pool, close_db_pool
 from .services.queue import close_redis
-from .routers import tools, excel, ai_review, roadmap
+from .routers import tools, excel, ai_review, roadmap, usage
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,3 +33,4 @@ app.include_router(tools.router)
 app.include_router(excel.router)
 app.include_router(ai_review.router)
 app.include_router(roadmap.router)
+app.include_router(usage.router)

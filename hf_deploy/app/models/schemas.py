@@ -20,6 +20,10 @@ class ToolType(str, Enum):
     DOCUMENT_TRANSLATION = "document-translation"
     ROADMAP = "roadmap"
     COMPRESS_FILES = "compress-files"
+    MERGE_PDF = "merge-pdf"
+    SPLIT_PDF = "split-pdf"
+    PDF_TO_JPG = "pdf-to-jpg"
+    JPG_TO_PDF = "jpg-to-pdf"
 
 class JobResult(BaseModel):
     extracted_text: Optional[str] = None

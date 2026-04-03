@@ -1,0 +1,15 @@
+{
+  "api": "usage",
+  "endpoint": "GET /api/usage/status",
+  "auth": "Cookie Based (Secure ID)",
+  "params": {
+    "ip_address": "Header (x-forwarded-for)"
+  },
+  "response": {
+    "visitorId": "uuid",
+    "usageCount": "number",
+    "dailyLimit": "number (10)",
+    "isLimitReached": "boolean",
+    "resetAt": "ISO Date (Midnight UTC)"
+  }
+}

@@ -1,42 +1,39 @@
-"use client";
-
 import React from 'react';
-import RoadmapCard from './RoadmapCard';
+import KanbanCard from './KanbanCard';
 
-interface RoadmapItem {
-  id: string;
+interface KanbanColumnProps {
   title: string;
-  description?: string;
-  priority: number;
-  category?: string;
+  items: any[];
+  status: string;
 }
 
-interface ColumnProps {
-  label: string;
-  items: RoadmapItem[];
-}
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ title, items, status }) => {
+  const getHeaderStyle = (s: string) => {
+    switch (s) {
+      case 'backlog': return 'bg-slate-100 text-slate-500 border-slate-200';
+      case 'planned': return 'bg-amber-50 text-amber-600 border-amber-100';
+      case 'processing': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+      case 'done': return 'bg-green-50 text-green-600 border-green-100';
+      default: return 'bg-slate-100 text-slate-500 border-slate-200';
+    }
+  };
 
-const KanbanColumn = ({ label, items }: ColumnProps) => {
   return (
-    <div className="flex-1 min-w-[280px] bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex flex-col h-full max-h-[80vh] overflow-y-auto">
-      <div className="flex items-center justify-between mb-6 sticky top-0 bg-slate-50 pb-2 z-10">
-        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-          {label}
-          <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">
-            {items.length}
-          </span>
-        </h3>
+    <div className="flex flex-col gap-6 flex-1 min-w-[280px] h-full p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50 shadow-inner">
+      <div className={`p-4 rounded-2xl border flex items-center justify-between backdrop-blur-md shadow-sm ${getHeaderStyle(status)}`}>
+        <h3 className="font-black text-sm uppercase tracking-[0.2em]">{title}</h3>
+        <span className="bg-white/50 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+          {items.length}
+        </span>
       </div>
       
-      <div className="flex-1 space-y-3 pb-8">
-        {items.length > 0 ? (
-          items.map((item) => (
-            <RoadmapCard key={item.id} item={item} />
-          ))
-        ) : (
-          <div className="py-12 flex flex-col items-center justify-center text-center opacity-40">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-300 mb-3" />
-            <p className="text-xs font-medium text-slate-400">No items planned</p>
+      <div className="flex flex-col gap-4 overflow-y-auto pr-1 scrollbar-hide">
+        {items.sort((a, b) => a.priority - b.priority).map((item) => (
+          <KanbanCard key={item.id} item={item} />
+        ))}
+        {items.length === 0 && (
+          <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-200 rounded-3xl opacity-40">
+            <span className="text-[10px] font-black uppercase text-slate-400">Empty Section</span>
           </div>
         )}
       </div>

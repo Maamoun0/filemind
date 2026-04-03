@@ -39,6 +39,8 @@ export enum ToolType {
     COMPRESS_PDF = 'compress-pdf',
     EXTRACT_TEXT = 'extract-text',
     AI_SUMMARY_PDF = 'ai-summary-pdf',
+    PDF_TO_JPG = 'pdf-to-jpg',
+    JPG_TO_PDF = 'jpg-to-pdf',
 
     // Image Tools
     IMAGE_TO_PDF = 'image-to-pdf',

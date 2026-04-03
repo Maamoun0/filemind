@@ -11,6 +11,7 @@ class JobStatus(str, Enum):
 
 class ToolType(str, Enum):
     PDF_TO_WORD = "pdf-to-word"
+    OCR_PDF_TO_WORD = "ocr-pdf-to-word"
     WORD_TO_PDF = "word-to-pdf"
     COMPRESS_PDF = "compress-pdf"
     OCR_IMAGE = "ocr-image"

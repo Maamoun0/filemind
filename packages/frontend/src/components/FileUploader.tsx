@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useRef, ChangeEvent, DragEvent } from 'react';
-import { UploadCloud, File as FileIcon, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { UploadCloud, File as FileIcon, X, CheckCircle, AlertCircle, Loader2, ScanSearch, FileText } from 'lucide-react';
 import { JobStatus, ToolType } from '@filemind/shared';
 import { createOCRWorker, createPDFWorker } from '@/lib/workers/worker-client';
 import { DoubleCheckBadge } from './DoubleCheckBadge';
 
 interface FileUploaderProps {
     toolType: ToolType;
+    alternateToolType?: ToolType;
     maxSizeMB: number;
     acceptedMimeTypes: string;
     extraFields?: Record<string, string>;
@@ -16,11 +17,15 @@ interface FileUploaderProps {
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
     toolType,
+    alternateToolType,
     maxSizeMB,
     acceptedMimeTypes,
     extraFields,
     onSuccess,
 }) => {
+    // Mode selector state (only active when alternateToolType is provided)
+    const [activeMode, setActiveMode] = useState<'standard' | 'ocr'>('standard');
+    const effectiveToolType = activeMode === 'ocr' && alternateToolType ? alternateToolType : toolType;
     const [file, setFile] = useState<File | null>(null);
     const [isHovering, setIsHovering] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -107,7 +112,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             // Direct upload to backend server
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('toolType', toolType);
+            formData.append('toolType', effectiveToolType);
 
             const response = await fetch(`${API_URL}/api/tools/upload`, {
                 method: 'POST',
@@ -187,9 +192,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 }
             } else {
                 // Fallback extensions based on toolType if header is missing
-                if (toolType === ToolType.PDF_TO_WORD) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.docx`;
-                else if (toolType === ToolType.COMPRESS_FILES) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.zip`;
-                else if (toolType === ToolType.OCR_IMAGE) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.txt`;
+                if (effectiveToolType === ToolType.PDF_TO_WORD || effectiveToolType === ToolType.OCR_PDF_TO_WORD) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.docx`;
+                else if (effectiveToolType === ToolType.COMPRESS_FILES) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.zip`;
+                else if (effectiveToolType === ToolType.OCR_IMAGE) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.txt`;
             }
 
             a.download = outFileName;
@@ -209,6 +214,41 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
     return (
         <div className="w-full max-w-2xl mx-auto mt-8">
+            {/* Mode Selector Tabs — only shown when alternateToolType is provided */}
+            {alternateToolType && (
+                <div className="mb-6 animate-fade-in">
+                    <div className="flex rounded-2xl bg-slate-100/80 p-1.5 border border-slate-200/60 shadow-sm backdrop-blur-sm">
+                        <button
+                            onClick={() => setActiveMode('standard')}
+                            className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-300 ${
+                                activeMode === 'standard'
+                                    ? 'bg-white text-indigo-700 shadow-md shadow-indigo-100/50 ring-1 ring-indigo-100'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'
+                            }`}
+                        >
+                            <FileText size={18} className={activeMode === 'standard' ? 'text-indigo-500' : ''} />
+                            Standard PDF
+                        </button>
+                        <button
+                            onClick={() => setActiveMode('ocr')}
+                            className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-300 ${
+                                activeMode === 'ocr'
+                                    ? 'bg-white text-violet-700 shadow-md shadow-violet-100/50 ring-1 ring-violet-100'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'
+                            }`}
+                        >
+                            <ScanSearch size={18} className={activeMode === 'ocr' ? 'text-violet-500' : ''} />
+                            OCR Scanner
+                        </button>
+                    </div>
+                    <p className="text-xs text-center text-slate-500 mt-2.5 leading-relaxed">
+                        {activeMode === 'standard'
+                            ? '📄 Best for digital PDFs — preserves formatting, tables, and fonts.'
+                            : '🔍 Best for scanned books & printed documents — extracts text using AI OCR.'}
+                    </p>
+                </div>
+            )}
+
             {!file && (
                 <div
                     onClick={() => fileInputRef.current?.click()}

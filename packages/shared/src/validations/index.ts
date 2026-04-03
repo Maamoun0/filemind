@@ -5,6 +5,7 @@ import { ToolType } from '../types';
 // These apply per file upload based on tool category.
 export const MAX_FILE_SIZES = {
     [ToolType.PDF_TO_WORD]: 100 * 1024 * 1024, // 100MB
+    [ToolType.OCR_PDF_TO_WORD]: 100 * 1024 * 1024, // 100MB
     [ToolType.COMPRESS_PDF]: 150 * 1024 * 1024, // 150MB
     [ToolType.AI_SUMMARY_PDF]: 50 * 1024 * 1024, // 50MB
     [ToolType.OCR_IMAGE]: 25 * 1024 * 1024, // 25MB

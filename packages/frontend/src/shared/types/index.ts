@@ -32,6 +32,7 @@ export enum ToolCategory {
 export enum ToolType {
     // PDF Tools
     PDF_TO_WORD = 'pdf-to-word',
+    OCR_PDF_TO_WORD = 'ocr-pdf-to-word',
     WORD_TO_PDF = 'word-to-pdf',
     MERGE_PDF = 'merge-pdf',
     SPLIT_PDF = 'split-pdf',

@@ -20,10 +20,10 @@ export default function PdfToWordPage() {
                     Strictly Private
                 </div>
                 <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
-                    PDF to Word Converter
+                    PDF & OCR to Word Converter
                 </h1>
                 <p className="text-lg text-slate-600 max-w-xl mx-auto">
-                    Convert your PDF files to exact editable Word documents flawlessly in seconds with <span className="text-indigo-600 font-bold">fileMind</span>, whilst maintaining superior security.
+                    Convert digital PDFs or scanned documents to editable Word files flawlessly in seconds with <span className="text-indigo-600 font-bold">fileMind</span>, whilst maintaining superior security.
                 </p>
             </header>
 
@@ -31,6 +31,7 @@ export default function PdfToWordPage() {
             <div className="animate-fade-in">
                 <FileUploader
                     toolType={ToolType.PDF_TO_WORD}
+                    alternateToolType={ToolType.OCR_PDF_TO_WORD}
                     maxSizeMB={maxMb}
                     acceptedMimeTypes="application/pdf, .pdf"
                 />

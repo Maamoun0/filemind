@@ -5,7 +5,7 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Background
 from fastapi.responses import FileResponse
 from ..models.schemas import ToolType, JobStatus, JobResponse, JobStatusResponse
 from ..services.database import get_db_pool
-from ..services.pdf_service import process_pdf_to_word
+from ..services.pdf_service import process_pdf_to_word, process_ocr_pdf_to_word
 
 router = APIRouter(prefix="/api/tools", tags=["Tools"])
 
@@ -27,7 +27,9 @@ async def upload_file(
     temp_dir = Path("/tmp")
     upload_path = temp_dir / "uploads" / job_id / f"original{Path(file.filename or '').suffix}"
     output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.docx"
-    if tool_enum == ToolType.COMPRESS_FILES:
+    if tool_enum == ToolType.OCR_PDF_TO_WORD:
+        output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.docx"
+    elif tool_enum == ToolType.COMPRESS_FILES:
         output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.zip"
     elif tool_enum == ToolType.OCR_IMAGE:
         output_path = temp_dir / "outputs" / job_id / f"{Path(file.filename or '').stem}.txt"
@@ -54,6 +56,9 @@ async def upload_file(
         try:
             if tool_enum == ToolType.PDF_TO_WORD:
                 await process_pdf_to_word(job_id, str(upload_path), str(output_path))
+                job_store[job_id]["status"] = JobStatus.COMPLETED
+            elif tool_enum == ToolType.OCR_PDF_TO_WORD:
+                await process_ocr_pdf_to_word(job_id, str(upload_path), str(output_path))
                 job_store[job_id]["status"] = JobStatus.COMPLETED
             elif tool_enum == ToolType.COMPRESS_FILES:
                 await process_compress_file(job_id, str(upload_path), str(output_path))

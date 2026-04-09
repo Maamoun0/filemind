@@ -59,11 +59,13 @@ export default function DynamicToolPage({ params }: { params: { tool: string } }
   
   if (!config) {
     notFound();
+    return null; // TypeScript type narrowing — notFound() throws, but TS doesn't know that
   }
 
   // Map string to ToolType enum
   const actualToolType = ToolType[config.toolType as keyof typeof ToolType] || ToolType.PDF_TO_WORD;
-  const maxMb = MAX_FILE_SIZES[actualToolType] / (1024 * 1024) || 100;
+  const maxMbBytes = MAX_FILE_SIZES[actualToolType as keyof typeof MAX_FILE_SIZES];
+  const maxMb = maxMbBytes ? maxMbBytes / (1024 * 1024) : 100;
 
   // Schema LD+JSON data
   const faqSchema = {

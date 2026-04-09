@@ -186,42 +186,93 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     };
 
     const handleDownload = async (id: string, fileName: string) => {
+        console.log(`[fileMind-UI] Starting download for job: ${id}, original: ${fileName}`);
         setIsDownloading(true);
+        setError(null);
+        
         try {
-            const response = await fetch(`${API_URL}/api/tools/download/${id}`);
-            if (!response.ok) throw new Error('Download failed');
+            // Use Next.js API proxy route to avoid CORS issues with binary blob downloads
+            // The proxy at /api/tools/download/[jobId] fetches server-to-server from Railway backend
+            const proxyUrl = `/api/tools/download/${id}`;
+            console.log(`[fileMind-UI] Fetching via proxy: ${proxyUrl}`);
+            
+            const response = await fetch(proxyUrl, {
+                method: 'GET',
+            });
+            
+            if (!response.ok) {
+                let errorMessage = `Server error (${response.status})`;
+                try {
+                    const errorText = await response.text();
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.detail || errorMessage;
+                    } catch {
+                        errorMessage = errorText || errorMessage;
+                    }
+                } catch {
+                    // Fail silently and use default errorMessage
+                }
+                console.error('[fileMind-UI] Download failed:', response.status, errorMessage);
+                throw new Error(errorMessage);
+            }
             
             const blob = await response.blob();
+            if (blob.size === 0) {
+                console.error('[fileMind-UI] Error: Received empty blob');
+                throw new Error('Received an empty file from server. The file might have expired.');
+            }
+            
+            console.log(`[fileMind-UI] Received blob of size: ${blob.size} bytes. Type: ${blob.type}`);
+            
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            let outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.bin`;
             
             const disposition = response.headers.get('content-disposition');
-            if (disposition && disposition.indexOf('filename=') !== -1) {
-                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) {
-                    outFileName = matches[1].replace(/['"]/g, '');
+            console.log('[fileMind-UI] Raw Content-Disposition header:', disposition);
+            
+            let outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.bin`;
+            
+            if (disposition) {
+                // Support both standard and RFC 5987 (UTF-8) filenames (case-insensitive)
+                const utf8Match = disposition.match(/filename\*=utf-8''([^;\n]*)/i);
+                if (utf8Match && utf8Match[1]) {
+                    console.log('[fileMind-UI] Found UTF-8 encoded filename');
+                    outFileName = decodeURIComponent(utf8Match[1].trim());
+                } else {
+                    const standardMatch = disposition.match(/filename="?([^";\n]*)"?/);
+                    if (standardMatch && standardMatch[1]) {
+                        console.log('[fileMind-UI] Found standard filename');
+                        outFileName = standardMatch[1].trim();
+                    }
                 }
             } else {
-                // Fallback extensions based on toolType if header is missing
-                if (effectiveToolType === ToolType.PDF_TO_WORD || effectiveToolType === ToolType.OCR_PDF_TO_WORD) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.docx`;
-                else if (effectiveToolType === ToolType.COMPRESS_FILES) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.zip`;
-                else if (effectiveToolType === ToolType.OCR_IMAGE) outFileName = `fileMind_${fileName.replace(/\.[^.]+$/, '')}.txt`;
+                console.warn('[fileMind-UI] Content-Disposition header not found or not exposed. Running fallback logic.');
+                const stem = fileName.replace(/\.[^.]+$/, '');
+                if (effectiveToolType === ToolType.PDF_TO_WORD || effectiveToolType === ToolType.OCR_PDF_TO_WORD) outFileName = `fileMind_${stem}.docx`;
+                else if (effectiveToolType === ToolType.COMPRESS_FILES) outFileName = `fileMind_${stem}.zip`;
+                else if (effectiveToolType === ToolType.OCR_IMAGE) outFileName = `fileMind_${stem}.txt`;
             }
 
+            console.log(`[fileMind-UI] Initiating browser download for: ${outFileName}`);
             a.download = outFileName;
             
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        } catch (err) {
-            console.error('[fileMind] Download error:', err);
-            setError('Failed to download. Please try again.');
-        } finally {
+            
+            // Allow time for browser to register the blob URL before revocation
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                setIsDownloading(false);
+                console.log('[fileMind-UI] Cleanup complete, download handles passed to browser.');
+            }, 1000);
+
+        } catch (err: any) {
+            console.error('[fileMind-UI] Download process error:', err);
+            setError(err.message || 'The download failed. Your session might have expired or the server is busy.');
             setIsDownloading(false);
         }
     };

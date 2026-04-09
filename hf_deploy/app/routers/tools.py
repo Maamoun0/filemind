@@ -137,14 +137,17 @@ async def download_result(job_id: str):
     
     print(f"[fileMind-Engine] Serving file: {target_file} with download name: {viral_filename}")
     
-    # RFC 5987 compliant filename encoding for non-ASCII (Arabic) support
-    encoded_filename = urllib.parse.quote(viral_filename)
+    # RFC 5987 compliant filename encoding for non-ASCII (Arabic) support.
+    # HTTP headers must be ASCII — put percent-encoded name in filename*= (RFC 5987)
+    # and an ASCII-safe fallback in filename= for older clients.
+    encoded_filename = urllib.parse.quote(viral_filename, safe='')
+    ascii_filename = viral_filename.encode('ascii', 'ignore').decode('ascii').strip() or 'filemind_download'
     
     headers = {
-        "Content-Disposition": f'attachment; filename="{viral_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+        "Content-Disposition": f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"
     }
     
-    print(f"[fileMind-Engine] Serving file: {target_file} with encoded name for RFC 5987")
+    print(f"[fileMind-Engine] Header set: {headers['Content-Disposition']}")
     
     return FileResponse(
         path=str(target_file),

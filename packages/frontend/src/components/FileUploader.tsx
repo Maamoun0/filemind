@@ -423,7 +423,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                                     Preparing...
                                                 </>
                                             ) : (
-                                                'تحميل النتيجة ✅'
+                                                'Download Verified Result ✅'
                                             )}
                                         </button>
                                         <button 

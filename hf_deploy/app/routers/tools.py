@@ -1,7 +1,8 @@
-import uuid, aiofiles
+import uuid, aiofiles, urllib.parse
 from datetime import datetime, timedelta
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Request, Response
+from fastapi.responses import FileResponse
 from ..models.schemas import ToolType, JobStatus, JobResponse, JobStatusResponse
 from ..services.usage_service import UsageService
 from ..services.database import get_db_pool
@@ -115,12 +116,38 @@ async def check_job_status(job_id: str):
 
 @router.get("/download/{job_id}")
 async def download_result(job_id: str):
+    print(f"[fileMind-Engine] Download request received for job: {job_id}")
     output_dir = Path("/tmp") / "outputs" / job_id
-    if output_dir.exists():
-        files = list(output_dir.iterdir())
-        if files:
-            # Viral Prefix Logic (P2)
-            original_filename = files[0].name
-            viral_filename = f"filemind_{original_filename}"
-            return FileResponse(path=str(files[0]), filename=viral_filename)
-    raise HTTPException(404, detail="Converted file not found or expired.")
+    
+    if not output_dir.exists():
+        print(f"[fileMind-Engine] Error: Output directory not found: {output_dir}")
+        raise HTTPException(404, detail="Converted file folder not found.")
+        
+    files = [f for f in output_dir.iterdir() if f.is_file()]
+    print(f"[fileMind-Engine] Files found in output dir: {[f.name for f in files]}")
+    
+    if not files:
+        print(f"[fileMind-Engine] Error: No files found in output directory: {output_dir}")
+        raise HTTPException(404, detail="Converted file not found in storage.")
+        
+    # Take the first file (should be the converted one)
+    target_file = files[0]
+    original_filename = target_file.name
+    viral_filename = f"filemind_{original_filename}"
+    
+    print(f"[fileMind-Engine] Serving file: {target_file} with download name: {viral_filename}")
+    
+    # RFC 5987 compliant filename encoding for non-ASCII (Arabic) support
+    encoded_filename = urllib.parse.quote(viral_filename)
+    
+    headers = {
+        "Content-Disposition": f'attachment; filename="{viral_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+    }
+    
+    print(f"[fileMind-Engine] Serving file: {target_file} with encoded name for RFC 5987")
+    
+    return FileResponse(
+        path=str(target_file),
+        headers=headers,
+        media_type="application/octet-stream"
+    )
